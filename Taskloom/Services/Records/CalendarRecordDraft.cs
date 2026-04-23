@@ -51,4 +51,14 @@ public sealed class CalendarRecordDraft
     /// Место проведения события.
     /// </summary>
     public string? Location { get; set; }
+
+    /// <summary>
+    /// Статус события.
+    /// </summary>
+    public EventStatus EventStatus { get; set; } = EventStatus.Scheduled;
+
+    /// <summary>
+    /// За сколько минут до события нужно показать напоминание.
+    /// </summary>
+    public int ReminderMinutesBefore { get; set; } = 60;
 }

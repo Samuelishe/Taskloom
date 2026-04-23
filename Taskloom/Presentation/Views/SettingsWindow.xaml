@@ -10,70 +10,109 @@
         Height="390"
         MinWidth="420"
         MinHeight="360"
-        Background="{DynamicResource App.WindowBackgroundBrush}"
+        Background="{DynamicResource App.BorderStrongBrush}"
+        Icon="/Assets/Icons/Taskloom.ico"
         WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
         ResizeMode="NoResize">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <WindowChrome.WindowChrome>
+        <WindowChrome
+            CaptionHeight="48"
+            CornerRadius="0"
+            GlassFrameThickness="0"
+            NonClientFrameEdges="None"
+            ResizeBorderThickness="0"
+            UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
 
-        <TextBlock
-            FontSize="26"
-            FontWeight="SemiBold"
-            Foreground="{DynamicResource App.TextPrimaryBrush}"
-            Text="{markup:Loc Settings.Header}" />
+    <Border
+        Padding="1"
+        Background="{DynamicResource App.BorderStrongBrush}">
+        <Grid Background="{DynamicResource App.SurfacePrimaryBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <TextBlock
-            Grid.Row="1"
-            Margin="0,10,0,0"
-            TextWrapping="Wrap"
-            Foreground="{DynamicResource App.TextSecondaryBrush}"
-            Text="{markup:Loc Settings.Description}" />
+            <Grid
+                Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                MouseLeftButtonDown="CustomTitleBar_OnMouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="2" Margin="0,24,0,0">
-            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Settings.Language}" />
-            <ComboBox
-                Margin="0,8,0,0"
-                ItemsSource="{Binding Languages}"
-                SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}" />
-        </StackPanel>
+                <TextBlock
+                    Margin="24,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource App.TextPrimaryBrush}"
+                    Text="{markup:Loc Settings.WindowTitle}" />
 
-        <StackPanel Grid.Row="3" Margin="0,18,0,0">
-            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Settings.Theme}" />
-            <ComboBox
-                Margin="0,8,0,0"
-                ItemsSource="{Binding Themes}"
-                SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" />
-        </StackPanel>
+                <Button
+                    Grid.Column="1"
+                    Margin="0,7,12,0"
+                    Style="{StaticResource WindowCloseCaptionButtonStyle}"
+                    Click="CloseButton_OnClick"
+                    Content="&#xE8BB;"
+                    WindowChrome.IsHitTestVisibleInChrome="True" />
+            </Grid>
 
-        <TextBlock
-            Grid.Row="4"
-            Margin="0,16,0,0"
-            Foreground="{DynamicResource App.ErrorBrush}"
-            TextWrapping="Wrap"
-            Text="{Binding StatusText}" />
+            <Grid Grid.Row="1" Margin="24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-        <StackPanel
-            Grid.Row="5"
-            HorizontalAlignment="Right"
-            Orientation="Horizontal">
-            <Button
-                Width="120"
-                Style="{StaticResource SecondaryActionButtonStyle}"
-                Command="{Binding CancelCommand}"
-                Content="{markup:Loc Settings.Cancel}" />
-            <Button
-                Width="120"
-                Margin="12,0,0,0"
-                Style="{StaticResource PrimaryActionButtonStyle}"
-                Command="{Binding SaveCommand}"
-                Content="{markup:Loc Settings.Save}" />
-        </StackPanel>
-    </Grid>
+                <TextBlock
+                    FontSize="26"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource App.TextPrimaryBrush}"
+                    Text="{markup:Loc Settings.Header}" />
+
+                <TextBlock
+                    Grid.Row="1"
+                    Margin="0,10,0,0"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource App.TextSecondaryBrush}"
+                    Text="{markup:Loc Settings.Description}" />
+
+                <StackPanel Grid.Row="2" Margin="0,24,0,0">
+                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Settings.Language}" />
+                    <ComboBox
+                        Margin="0,8,0,0"
+                        ItemsSource="{Binding Languages}"
+                        SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="3" Margin="0,18,0,0">
+                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Settings.Theme}" />
+                    <ComboBox
+                        Margin="0,8,0,0"
+                        ItemsSource="{Binding Themes}"
+                        SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" />
+                </StackPanel>
+
+                <TextBlock
+                    Grid.Row="4"
+                    Margin="0,16,0,0"
+                    Foreground="{DynamicResource App.ErrorBrush}"
+                    TextWrapping="Wrap"
+                    Text="{Binding StatusText}" />
+
+                <Button
+                    Grid.Row="5"
+                    Width="120"
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource PrimaryActionButtonStyle}"
+                    Command="{Binding SaveCommand}"
+                    Content="{markup:Loc Settings.Save}" />
+            </Grid>
+        </Grid>
+    </Border>
 </Window>

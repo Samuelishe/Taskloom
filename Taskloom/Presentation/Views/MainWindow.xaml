@@ -13,7 +13,9 @@
         MinWidth="1280"
         MinHeight="800"
         Background="{DynamicResource App.WindowBackgroundBrush}"
+        Icon="/Assets/Icons/Taskloom.ico"
         WindowStyle="None"
+        WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize">
     <WindowChrome.WindowChrome>
         <WindowChrome
@@ -27,6 +29,105 @@
 
     <Window.Resources>
         <converters:AdaptiveCardWidthConverter x:Key="AdaptiveCardWidthConverter" />
+        <Style x:Key="CalendarPanelButtonStyle" TargetType="{x:Type CalendarButton}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CalendarButton}">
+                        <Border
+                            x:Name="RootBorder"
+                            Margin="2"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="7"
+                            Padding="8,6">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="RootBorder" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CalendarPanelDayButtonStyle" TargetType="{x:Type CalendarDayButton}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CalendarDayButton}">
+                        <Border
+                            x:Name="RootBorder"
+                            Margin="2"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            Padding="7,5">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderStrongBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceSelectedBrush}" />
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderSelectedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsToday" Value="True">
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.AccentPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsInactive" Value="True">
+                                <Setter TargetName="RootBorder" Property="Opacity" Value="0.62" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="RootBorder" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CalendarPanelStyle" TargetType="{x:Type Calendar}">
+            <Setter Property="Background" Value="{DynamicResource App.SurfaceSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="CalendarButtonStyle" Value="{StaticResource CalendarPanelButtonStyle}" />
+            <Setter Property="CalendarDayButtonStyle" Value="{StaticResource CalendarPanelDayButtonStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Calendar}">
+                        <CalendarItem
+                            x:Name="PART_CalendarItem"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -113,75 +214,235 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                <Border
-                    Margin="0"
-                    Padding="18"
-                    Background="{DynamicResource App.SurfaceTertiaryBrush}"
-                    BorderBrush="{DynamicResource App.BorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="16">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                    <TextBlock
+                        FontSize="13"
+                        Foreground="{DynamicResource App.TextSecondaryBrush}"
+                        Text="{Binding StatusText}"
+                        TextWrapping="Wrap" />
 
-                        <TextBlock
-                            Grid.Row="0"
-                            FontSize="26"
-                            FontWeight="SemiBold"
-                            Foreground="{DynamicResource App.TextPrimaryBrush}"
-                            Text="{Binding SelectedDateDisplay}" />
+                    <StackPanel
+                        Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Orientation="Vertical">
+                        <Viewbox
+                            Stretch="Uniform">
+                            <Calendar
+                                Style="{StaticResource CalendarPanelStyle}"
+                                SelectedDate="{Binding SelectedDateValue, Mode=TwoWay}">
+                                <Calendar.Resources>
+                                    <Style TargetType="{x:Type CalendarItem}">
+                                        <Setter Property="Background" Value="{DynamicResource App.SurfaceSecondaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="Transparent" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="{x:Type CalendarItem}">
+                                                    <Border
+                                                        Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                                                        BorderBrush="Transparent"
+                                                        BorderThickness="0">
+                                                        <Grid
+                                                            x:Name="PART_Root"
+                                                            Background="{DynamicResource App.SurfaceSecondaryBrush}">
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="*" />
+                                                            </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="1" Margin="0,14,0,0">
+                                                            <Grid
+                                                                Margin="0,0,0,10"
+                                                                Background="{DynamicResource App.SurfaceSecondaryBrush}">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="42" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="42" />
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <Button
+                                                                    x:Name="PART_PreviousButton"
+                                                                    Grid.Column="0"
+                                                                    Width="34"
+                                                                    Height="30"
+                                                                    HorizontalAlignment="Left"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    FocusVisualStyle="{x:Null}"
+                                                                    Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                                    Content="‹" />
+
+                                                                <Button
+                                                                    x:Name="PART_HeaderButton"
+                                                                    Grid.Column="1"
+                                                                    Height="30"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    FocusVisualStyle="{x:Null}"
+                                                                    FontWeight="SemiBold"
+                                                                    Foreground="{DynamicResource App.TextPrimaryBrush}" />
+
+                                                                <Button
+                                                                    x:Name="PART_NextButton"
+                                                                    Grid.Column="2"
+                                                                    Width="34"
+                                                                    Height="30"
+                                                                    HorizontalAlignment="Right"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    FocusVisualStyle="{x:Null}"
+                                                                    Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                                    Content="›" />
+                                                            </Grid>
+
+                                                            <Grid
+                                                                x:Name="PART_MonthView"
+                                                                Grid.Row="1"
+                                                                Background="{DynamicResource App.SurfaceSecondaryBrush}">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+                                                            </Grid>
+
+                                                            <Grid
+                                                                x:Name="PART_YearView"
+                                                                Grid.Row="1"
+                                                                Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                                                                Visibility="Hidden">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                    <Style TargetType="{x:Type CalendarButton}">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="Transparent" />
+                                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="{x:Type CalendarButton}">
+                                                    <Border
+                                                        x:Name="RootBorder"
+                                                        Margin="2"
+                                                        Background="{TemplateBinding Background}"
+                                                        CornerRadius="7"
+                                                        Padding="8,6">
+                                                        <TextBlock
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                                            Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="RootBorder" Property="Opacity" Value="0.45" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                    <Style TargetType="{x:Type CalendarDayButton}">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="Transparent" />
+                                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="{x:Type CalendarDayButton}">
+                                                    <Border
+                                                        x:Name="RootBorder"
+                                                        Margin="2"
+                                                        Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="7"
+                                                        Padding="7,5">
+                                                        <TextBlock
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                                            Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                                                            <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderStrongBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceSelectedBrush}" />
+                                                            <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderSelectedBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsToday" Value="True">
+                                                            <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.AccentPrimaryBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsInactive" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource App.TextMutedBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="RootBorder" Property="Opacity" Value="0.45" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Calendar.Resources>
+                            </Calendar>
+                        </Viewbox>
+
+                        <Grid Margin="0,10,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                Foreground="{DynamicResource App.TextSecondaryBrush}"
-                                Text="{Binding StatusText}"
-                                TextWrapping="Wrap" />
-
                             <Button
-                                Grid.Column="2"
-                                MinWidth="120"
+                                Grid.Column="0"
                                 Style="{StaticResource SecondaryActionButtonStyle}"
                                 Command="{Binding PreviousDayCommand}"
                                 Content="{markup:Loc MainWindow.PreviousDay}" />
 
                             <Button
-                                Grid.Column="4"
-                                MinWidth="120"
+                                Grid.Column="2"
                                 Style="{StaticResource SecondaryActionButtonStyle}"
                                 Command="{Binding NextDayCommand}"
                                 Content="{markup:Loc MainWindow.NextDay}" />
                         </Grid>
-                    </Grid>
-                </Border>
-
-                <Border
-                    Grid.Row="1"
-                    Margin="0,16,0,0"
-                    Padding="8"
-                    Background="{DynamicResource App.SurfaceTertiaryBrush}"
-                    BorderBrush="{DynamicResource App.BorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="18">
-                    <Viewbox Stretch="Uniform">
-                        <Calendar
-                            Background="Transparent"
-                            BorderThickness="0"
-                            SelectedDate="{Binding SelectedDateValue, Mode=TwoWay}" />
-                    </Viewbox>
-                </Border>
-            </Grid>
+                    </StackPanel>
+                </Grid>
             </Border>
 
             <Border
@@ -366,6 +627,7 @@
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="*" />
                                                     </Grid.RowDefinitions>
 
@@ -378,13 +640,33 @@
                                                             Text="{Binding TypeDisplayName}" />
                                                     </Border>
 
-                                                    <Grid Grid.Column="1">
+                                                    <StackPanel
+                                                        Grid.Column="1"
+                                                        Orientation="Horizontal">
                                                         <Border
                                                             x:Name="InfoBadge"
+                                                            Margin="0,0,8,0"
                                                             Style="{StaticResource NeutralChipBorderStyle}">
                                                             <TextBlock
                                                                 Style="{StaticResource ChipTextStyle}"
                                                                 Text="{Binding TimeDisplay}" />
+                                                        </Border>
+
+                                                        <Border
+                                                            x:Name="EventStatusChip"
+                                                            Margin="0,0,8,0"
+                                                            Background="{DynamicResource App.StatusInfoBackgroundBrush}"
+                                                            BorderBrush="{DynamicResource App.StatusInfoBorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="7"
+                                                            Padding="10,6"
+                                                            Visibility="Collapsed">
+                                                            <TextBlock
+                                                                x:Name="EventStatusText"
+                                                                FontSize="12"
+                                                                FontWeight="SemiBold"
+                                                                Foreground="{DynamicResource App.StatusInfoForegroundBrush}"
+                                                                Text="{Binding EventStatusText}" />
                                                         </Border>
 
                                                         <Button
@@ -394,7 +676,7 @@
                                                             Style="{StaticResource StatusChipButtonStyle}"
                                                             Visibility="Collapsed">
                                                         </Button>
-                                                    </Grid>
+                                                    </StackPanel>
 
                                                     <TextBlock
                                                         Grid.Row="1"
@@ -409,6 +691,19 @@
 
                                                     <TextBlock
                                                         Grid.Row="2"
+                                                        Grid.ColumnSpan="2"
+                                                        x:Name="EventLocationText"
+                                                        Margin="0,10,0,0"
+                                                        FontSize="13"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{DynamicResource App.TextMutedBrush}"
+                                                        Text="{Binding LocationDisplay}"
+                                                        TextTrimming="CharacterEllipsis"
+                                                        Visibility="Collapsed" />
+
+                                                    <TextBlock
+                                                        Grid.Row="3"
+                                                        Grid.ColumnSpan="2"
                                                         Margin="0,10,0,0"
                                                         Foreground="{DynamicResource App.TextSecondaryBrush}"
                                                         MaxHeight="84"
@@ -436,6 +731,32 @@
                                             <DataTrigger Binding="{Binding IsTask}" Value="True">
                                                 <Setter TargetName="InfoBadge" Property="Visibility" Value="Collapsed" />
                                                 <Setter TargetName="TaskStatusChip" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding IsEvent}" Value="True">
+                                                <Setter TargetName="EventStatusChip" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding EventStatus}" Value="{x:Static domain:EventStatus.Completed}">
+                                                <Setter TargetName="EventStatusChip" Property="Background" Value="{DynamicResource App.StatusSuccessBackgroundBrush}" />
+                                                <Setter TargetName="EventStatusChip" Property="BorderBrush" Value="{DynamicResource App.StatusSuccessBorderBrush}" />
+                                                <Setter TargetName="EventStatusText" Property="Foreground" Value="{DynamicResource App.StatusSuccessForegroundBrush}" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding EventStatus}" Value="{x:Static domain:EventStatus.Rescheduled}">
+                                                <Setter TargetName="EventStatusChip" Property="Background" Value="{DynamicResource App.StatusWarningBackgroundBrush}" />
+                                                <Setter TargetName="EventStatusChip" Property="BorderBrush" Value="{DynamicResource App.StatusWarningBorderBrush}" />
+                                                <Setter TargetName="EventStatusText" Property="Foreground" Value="{DynamicResource App.StatusWarningForegroundBrush}" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding EventStatus}" Value="{x:Static domain:EventStatus.Canceled}">
+                                                <Setter TargetName="EventStatusChip" Property="Background" Value="{DynamicResource App.StatusDangerBackgroundBrush}" />
+                                                <Setter TargetName="EventStatusChip" Property="BorderBrush" Value="{DynamicResource App.StatusDangerBorderBrush}" />
+                                                <Setter TargetName="EventStatusText" Property="Foreground" Value="{DynamicResource App.StatusDangerForegroundBrush}" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasLocation}" Value="True">
+                                                <Setter TargetName="EventLocationText" Property="Visibility" Value="Visible" />
                                             </DataTrigger>
 
                                             <DataTrigger Binding="{Binding IsCompleted}" Value="True">

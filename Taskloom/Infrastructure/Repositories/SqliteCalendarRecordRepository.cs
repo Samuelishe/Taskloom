@@ -32,7 +32,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                is_completed AS IsCompleted,
                                start_time AS StartTime,
                                end_time AS EndTime,
-                               location AS Location
+                               location AS Location,
+                               event_status_id AS EventStatusId,
+                               reminder_minutes_before AS ReminderMinutesBefore
                            FROM calendar_records
                            WHERE id = @Id;
                            """;
@@ -60,7 +62,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                is_completed AS IsCompleted,
                                start_time AS StartTime,
                                end_time AS EndTime,
-                               location AS Location
+                               location AS Location,
+                               event_status_id AS EventStatusId,
+                               reminder_minutes_before AS ReminderMinutesBefore
                            FROM calendar_records
                            WHERE record_date = @Date
                              AND (@TypeId IS NULL OR type_id = @TypeId)
@@ -100,7 +104,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                is_completed,
                                start_time,
                                end_time,
-                               location
+                               location,
+                               event_status_id,
+                               reminder_minutes_before
                            )
                            VALUES
                            (
@@ -112,7 +118,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                @IsCompleted,
                                @StartTime,
                                @EndTime,
-                               @Location
+                               @Location,
+                               @EventStatusId,
+                               @ReminderMinutesBefore
                            )
                            ON CONFLICT(id) DO UPDATE SET
                                type_id = excluded.type_id,
@@ -122,7 +130,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                is_completed = excluded.is_completed,
                                start_time = excluded.start_time,
                                end_time = excluded.end_time,
-                               location = excluded.location;
+                               location = excluded.location,
+                               event_status_id = excluded.event_status_id,
+                               reminder_minutes_before = excluded.reminder_minutes_before;
                            """;
 
         var dataModel = MapToDataModel(record);
@@ -173,7 +183,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 dataModel.Details,
                 ParseRequiredTime(dataModel.StartTime, nameof(dataModel.StartTime)),
                 ParseRequiredTime(dataModel.EndTime, nameof(dataModel.EndTime)),
-                dataModel.Location),
+                dataModel.Location,
+                (EventStatus)(dataModel.EventStatusId ?? (int)EventStatus.Scheduled),
+                dataModel.ReminderMinutesBefore ?? 60),
 
             RecordType.DaySummary => new DaySummaryRecord(
                 id,
@@ -206,6 +218,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 dataModel.StartTime = eventRecord.StartTime.ToString("HH:mm");
                 dataModel.EndTime = eventRecord.EndTime.ToString("HH:mm");
                 dataModel.Location = eventRecord.Location;
+                dataModel.EventStatusId = (int)eventRecord.Status;
+                dataModel.ReminderMinutesBefore = eventRecord.ReminderMinutesBefore;
                 break;
         }
 

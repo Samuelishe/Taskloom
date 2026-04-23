@@ -33,5 +33,32 @@ public sealed class SqliteDatabaseInitializer
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         var command = new CommandDefinition(sql, cancellationToken: cancellationToken);
         await connection.ExecuteAsync(command);
+        await EnsureColumnAsync(connection, "event_status_id", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(connection, "reminder_minutes_before", "INTEGER NULL", cancellationToken);
+    }
+
+    private static async Task EnsureColumnAsync(
+        System.Data.IDbConnection connection,
+        string columnName,
+        string columnDefinition,
+        CancellationToken cancellationToken)
+    {
+        const string columnsSql = "PRAGMA table_info(calendar_records);";
+        var columns = await connection.QueryAsync(
+            new CommandDefinition(
+                columnsSql,
+                cancellationToken: cancellationToken));
+
+        if (columns.Any(column =>
+        {
+            var row = (IDictionary<string, object>)column;
+            return string.Equals(row["name"]?.ToString(), columnName, StringComparison.OrdinalIgnoreCase);
+        }))
+        {
+            return;
+        }
+
+        var alterSql = $"ALTER TABLE calendar_records ADD COLUMN {columnName} {columnDefinition};";
+        await connection.ExecuteAsync(new CommandDefinition(alterSql, cancellationToken: cancellationToken));
     }
 }

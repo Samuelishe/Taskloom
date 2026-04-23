@@ -16,6 +16,9 @@ public sealed class RecordListItemViewModel
         string? details,
         string timeDisplay,
         bool isCompleted,
+        string? locationDisplay = null,
+        EventStatus? eventStatus = null,
+        string? eventStatusText = null,
         string? taskStatusText = null,
         string? taskStatusIcon = null)
     {
@@ -26,6 +29,9 @@ public sealed class RecordListItemViewModel
         Details = details;
         TimeDisplay = timeDisplay;
         IsCompleted = isCompleted;
+        LocationDisplay = locationDisplay;
+        EventStatus = eventStatus;
+        EventStatusText = eventStatusText;
         TaskStatusText = taskStatusText;
         TaskStatusIcon = taskStatusIcon;
     }
@@ -45,6 +51,16 @@ public sealed class RecordListItemViewModel
     public bool IsCompleted { get; }
 
     public bool IsTask => Type == RecordType.Task;
+
+    public bool IsEvent => Type == RecordType.Event;
+
+    public bool HasLocation => !string.IsNullOrWhiteSpace(LocationDisplay);
+
+    public string? LocationDisplay { get; }
+
+    public EventStatus? EventStatus { get; }
+
+    public string? EventStatusText { get; }
 
     public string? TaskStatusText { get; }
 
@@ -68,6 +84,9 @@ public sealed class RecordListItemViewModel
                 taskRecord.Details,
                 localizationService.GetString("RecordList.TaskLabel"),
                 taskRecord.IsCompleted,
+                null,
+                null,
+                null,
                 taskRecord.IsCompleted
                     ? localizationService.GetString("RecordList.TaskCompleted")
                     : localizationService.GetString("RecordList.TaskPending"),
@@ -89,7 +108,12 @@ public sealed class RecordListItemViewModel
                 eventRecord.Title,
                 eventRecord.Details,
                 $"{eventRecord.StartTime:HH\\:mm} - {eventRecord.EndTime:HH\\:mm}",
-                false),
+                false,
+                string.IsNullOrWhiteSpace(eventRecord.Location)
+                    ? null
+                    : localizationService.Format("RecordList.EventLocation", eventRecord.Location),
+                eventRecord.Status,
+                localizationService.GetString(GetEventStatusKey(eventRecord.Status))),
 
             DaySummaryRecord summaryRecord => new RecordListItemViewModel(
                 summaryRecord.Id,
@@ -101,6 +125,18 @@ public sealed class RecordListItemViewModel
                 false),
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {record.GetType().Name}.")
+        };
+    }
+
+    private static string GetEventStatusKey(EventStatus status)
+    {
+        return status switch
+        {
+            Taskloom.Domain.EventStatus.Scheduled => "EventStatus.Scheduled",
+            Taskloom.Domain.EventStatus.Completed => "EventStatus.Completed",
+            Taskloom.Domain.EventStatus.Rescheduled => "EventStatus.Rescheduled",
+            Taskloom.Domain.EventStatus.Canceled => "EventStatus.Canceled",
+            _ => throw new InvalidOperationException($"Неподдерживаемый статус события: {status}.")
         };
     }
 }

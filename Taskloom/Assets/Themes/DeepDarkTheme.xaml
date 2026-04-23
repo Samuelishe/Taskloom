@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="App.WindowBackgroundBrush" Color="#FF17191C" />
+    <SolidColorBrush x:Key="App.SurfacePrimaryBrush" Color="#FF202327" />
+    <SolidColorBrush x:Key="App.SurfaceSecondaryBrush" Color="#FF1C1F23" />
+    <SolidColorBrush x:Key="App.SurfaceTertiaryBrush" Color="#FF262A2F" />
+    <SolidColorBrush x:Key="App.SurfaceMutedBrush" Color="#FF252A30" />
+    <SolidColorBrush x:Key="App.SurfaceHoverBrush" Color="#FF343B43" />
+    <SolidColorBrush x:Key="App.SurfaceSelectedBrush" Color="#FF3A4654" />
+    <SolidColorBrush x:Key="App.InputBackgroundBrush" Color="#FF25292E" />
+    <SolidColorBrush x:Key="App.BorderBrush" Color="#FF46505A" />
+    <SolidColorBrush x:Key="App.BorderStrongBrush" Color="#FF667383" />
+    <SolidColorBrush x:Key="App.BorderSelectedBrush" Color="#FF9AA2AC" />
+    <SolidColorBrush x:Key="App.TextPrimaryBrush" Color="#FFF4F6F8" />
+    <SolidColorBrush x:Key="App.TextSecondaryBrush" Color="#FFC9D0D7" />
+    <SolidColorBrush x:Key="App.TextMutedBrush" Color="#FF9EA8B2" />
+    <SolidColorBrush x:Key="App.TextInverseBrush" Color="#FF121417" />
+    <SolidColorBrush x:Key="App.AccentPrimaryBrush" Color="#FF9AA2AC" />
+    <SolidColorBrush x:Key="App.AccentPrimaryHoverBrush" Color="#FFAAB2BC" />
+    <SolidColorBrush x:Key="App.AccentPrimaryPressedBrush" Color="#FF858D98" />
+    <SolidColorBrush x:Key="App.AccentTaskBrush" Color="#FF9AA2AC" />
+    <SolidColorBrush x:Key="App.AccentNoteBrush" Color="#FF85B59A" />
+    <SolidColorBrush x:Key="App.AccentEventBrush" Color="#FFA092C2" />
+    <SolidColorBrush x:Key="App.AccentSummaryBrush" Color="#FFC08DA8" />
+    <SolidColorBrush x:Key="App.SelectionStripeBrush" Color="#FF9AA2AC" />
+    <SolidColorBrush x:Key="App.ErrorBrush" Color="#FFFF8F87" />
+    <SolidColorBrush x:Key="App.ChipNeutralBackgroundBrush" Color="#FF292E34" />
+    <SolidColorBrush x:Key="App.ChipNeutralForegroundBrush" Color="#FFDDE3E8" />
+    <SolidColorBrush x:Key="App.ChipNeutralBorderBrush" Color="#FF3D4650" />
+    <SolidColorBrush x:Key="App.StatusSuccessBackgroundBrush" Color="#FF213B30" />
+    <SolidColorBrush x:Key="App.StatusSuccessForegroundBrush" Color="#FFB5E9CB" />
+    <SolidColorBrush x:Key="App.StatusSuccessBorderBrush" Color="#FF3F6E58" />
+    <SolidColorBrush x:Key="App.StatusDangerBackgroundBrush" Color="#FF47282C" />
+    <SolidColorBrush x:Key="App.StatusDangerForegroundBrush" Color="#FFFFB9B6" />
+    <SolidColorBrush x:Key="App.StatusDangerBorderBrush" Color="#FF794C52" />
+    <SolidColorBrush x:Key="App.StatusInfoBackgroundBrush" Color="#FF2E353D" />
+    <SolidColorBrush x:Key="App.StatusInfoForegroundBrush" Color="#FFDCE2E8" />
+    <SolidColorBrush x:Key="App.StatusInfoBorderBrush" Color="#FF59636E" />
+    <SolidColorBrush x:Key="App.StatusWarningBackgroundBrush" Color="#FF46391F" />
+    <SolidColorBrush x:Key="App.StatusWarningForegroundBrush" Color="#FFF0D491" />
+    <SolidColorBrush x:Key="App.StatusWarningBorderBrush" Color="#FF756136" />
+</ResourceDictionary>

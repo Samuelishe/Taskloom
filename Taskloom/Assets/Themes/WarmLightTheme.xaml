@@ -33,4 +33,10 @@
     <SolidColorBrush x:Key="App.StatusDangerBackgroundBrush" Color="#FFF3E7E1" />
     <SolidColorBrush x:Key="App.StatusDangerForegroundBrush" Color="#FF91584E" />
     <SolidColorBrush x:Key="App.StatusDangerBorderBrush" Color="#FFE1C2B6" />
+    <SolidColorBrush x:Key="App.StatusInfoBackgroundBrush" Color="#FFE9EEF1" />
+    <SolidColorBrush x:Key="App.StatusInfoForegroundBrush" Color="#FF526774" />
+    <SolidColorBrush x:Key="App.StatusInfoBorderBrush" Color="#FFC6D2D8" />
+    <SolidColorBrush x:Key="App.StatusWarningBackgroundBrush" Color="#FFF3EBD8" />
+    <SolidColorBrush x:Key="App.StatusWarningForegroundBrush" Color="#FF806239" />
+    <SolidColorBrush x:Key="App.StatusWarningBorderBrush" Color="#FFE0CEA4" />
 </ResourceDictionary>

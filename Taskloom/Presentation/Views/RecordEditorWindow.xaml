@@ -6,15 +6,62 @@
         xmlns:markup="clr-namespace:Taskloom.Common.Markup"
         mc:Ignorable="d"
         Title="{Binding EditorTitle}"
-        Width="560"
-        Height="720"
-        MinWidth="520"
-        MinHeight="640"
-        Background="{DynamicResource App.WindowBackgroundBrush}"
+        Width="640"
+        Height="860"
+        MinWidth="560"
+        MinHeight="720"
+        Background="{DynamicResource App.BorderStrongBrush}"
+        Icon="/Assets/Icons/Taskloom.ico"
         WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
         ResizeMode="CanResize">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="24">
+    <WindowChrome.WindowChrome>
+        <WindowChrome
+            CaptionHeight="48"
+            CornerRadius="0"
+            GlassFrameThickness="0"
+            NonClientFrameEdges="None"
+            ResizeBorderThickness="8"
+            UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Border
+        Padding="1"
+        Background="{DynamicResource App.BorderStrongBrush}">
+        <Grid Background="{DynamicResource App.SurfacePrimaryBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid
+                Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                MouseLeftButtonDown="CustomTitleBar_OnMouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock
+                    Margin="24,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource App.TextPrimaryBrush}"
+                    Text="{Binding EditorTitle}" />
+
+                <Button
+                    Grid.Column="1"
+                    Margin="0,7,12,0"
+                    Style="{StaticResource WindowCloseCaptionButtonStyle}"
+                    Click="CloseButton_OnClick"
+                    Content="&#xE8BB;"
+                    WindowChrome.IsHitTestVisibleInChrome="True" />
+            </Grid>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <Grid Margin="24">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -22,20 +69,9 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <TextBlock
-                FontSize="26"
-                FontWeight="SemiBold"
-                Foreground="{DynamicResource App.TextPrimaryBrush}"
-                Text="{Binding EditorTitle}" />
-
-            <StackPanel Grid.Row="1" Margin="0,18,0,0">
+            <StackPanel Grid.Row="0">
                 <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.RecordType}" />
                 <ComboBox
                     Margin="0,6,0,0"
@@ -45,21 +81,23 @@
                 </ComboBox>
             </StackPanel>
 
-            <StackPanel Grid.Row="2" Margin="0,16,0,0">
+            <StackPanel Grid.Row="1" Margin="0,16,0,0">
                 <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Date}" />
                 <DatePicker
+                    Width="260"
+                    HorizontalAlignment="Left"
                     Margin="0,6,0,0"
                     SelectedDate="{Binding DateValue, Mode=TwoWay}" />
             </StackPanel>
 
-            <StackPanel Grid.Row="3" Margin="0,16,0,0">
+            <StackPanel Grid.Row="2" Margin="0,16,0,0">
                 <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Title}" />
                 <TextBox
                     Margin="0,6,0,0"
                     Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
-            <StackPanel Grid.Row="4" Margin="0,16,0,0">
+            <StackPanel Grid.Row="3" Margin="0,16,0,0">
                 <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Details}" />
                 <TextBox
                     Margin="0,6,0,0"
@@ -70,28 +108,28 @@
                     Text="{Binding Details, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
-            <Border Grid.Row="5" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+            <Border Grid.Row="4" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsTask}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <StackPanel>
                     <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.TaskOptions}" />
                     <CheckBox
                         Margin="0,8,0,0"
                         Content="{markup:Loc Editor.Completed}"
-                        IsChecked="{Binding IsCompleted, Mode=TwoWay}">
-                        <CheckBox.Style>
-                            <Style TargetType="CheckBox">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsTask}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </CheckBox.Style>
-                    </CheckBox>
+                        Foreground="{DynamicResource App.TextPrimaryBrush}"
+                        IsChecked="{Binding IsCompleted, Mode=TwoWay}" />
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="6" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+            <Border Grid.Row="5" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -112,17 +150,125 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.StartTime}" />
-                            <TextBox
+                            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.EventStatus}" />
+                            <ComboBox
                                 Margin="0,6,0,0"
-                                Text="{Binding StartTimeText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                ItemsSource="{Binding EventStatusOptions}"
+                                SelectedValue="{Binding EventStatus, Mode=TwoWay}"
+                                SelectedValuePath="Status" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Reminder}" />
+                            <ComboBox
+                                Margin="0,6,0,0"
+                                ItemsSource="{Binding ReminderOptions}"
+                                SelectedValue="{Binding ReminderMinutesBefore, Mode=TwoWay}"
+                                SelectedValuePath="MinutesBefore" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.StartTime}" />
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox
+                                    Grid.Column="0"
+                                    ItemsSource="{Binding HourOptions}"
+                                    DisplayMemberPath="Title"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding SelectedStartHour, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Margin="6,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                    Text=":" />
+                                <ComboBox
+                                    Grid.Column="2"
+                                    ItemsSource="{Binding MinuteSecondOptions}"
+                                    DisplayMemberPath="Title"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding SelectedStartMinute, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Margin="6,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                    Text=":" />
+                                <ComboBox
+                                    Grid.Column="4"
+                                    ItemsSource="{Binding MinuteSecondOptions}"
+                                    DisplayMemberPath="Title"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding SelectedStartSecond, Mode=TwoWay}" />
+                            </Grid>
                         </StackPanel>
 
                         <StackPanel Grid.Column="2">
                             <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.EndTime}" />
-                            <TextBox
-                                Margin="0,6,0,0"
-                                Text="{Binding EndTimeText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox
+                                    Grid.Column="0"
+                                    ItemsSource="{Binding HourOptions}"
+                                    DisplayMemberPath="Title"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding SelectedEndHour, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Margin="6,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                    Text=":" />
+                                <ComboBox
+                                    Grid.Column="2"
+                                    ItemsSource="{Binding MinuteSecondOptions}"
+                                    DisplayMemberPath="Title"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding SelectedEndMinute, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Margin="6,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                    Text=":" />
+                                <ComboBox
+                                    Grid.Column="4"
+                                    ItemsSource="{Binding MinuteSecondOptions}"
+                                    DisplayMemberPath="Title"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding SelectedEndSecond, Mode=TwoWay}" />
+                            </Grid>
                         </StackPanel>
                     </Grid>
 
@@ -135,37 +281,45 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock
-                Grid.Row="7"
-                Margin="0,16,0,0"
-                Foreground="{DynamicResource App.ErrorBrush}"
-                Text="{Binding ValidationMessage}"
-                TextWrapping="Wrap" />
+                </Grid>
+            </ScrollViewer>
 
-            <TextBlock
-                Grid.Row="8"
-                Margin="0,8,0,0"
-                Foreground="{DynamicResource App.TextMutedBrush}"
-                Text="{markup:Loc Editor.TimeFormatHint}"
-                TextWrapping="Wrap" />
+            <Border
+                Grid.Row="2"
+                Padding="24,16,24,24"
+                Background="{DynamicResource App.SurfacePrimaryBrush}"
+                BorderBrush="{DynamicResource App.BorderBrush}"
+                BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-            <StackPanel
-                Grid.Row="10"
-                Margin="0,24,0,0"
-                HorizontalAlignment="Right"
-                Orientation="Horizontal">
-                <Button
-                    Width="120"
-                    Style="{StaticResource SecondaryActionButtonStyle}"
-                    Command="{Binding CancelCommand}"
-                    Content="{markup:Loc Editor.Cancel}" />
-                <Button
-                    Width="120"
-                    Margin="12,0,0,0"
-                    Style="{StaticResource PrimaryActionButtonStyle}"
-                    Command="{Binding SaveCommand}"
-                    Content="{markup:Loc Editor.Save}" />
-            </StackPanel>
+                    <TextBlock
+                        Foreground="{DynamicResource App.ErrorBrush}"
+                        Text="{Binding ValidationMessage}"
+                        TextWrapping="Wrap" />
+
+                    <StackPanel
+                        Grid.Row="1"
+                        Margin="0,12,0,0"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal">
+                        <Button
+                            Width="120"
+                            Style="{StaticResource SecondaryActionButtonStyle}"
+                            Command="{Binding CancelCommand}"
+                            Content="{markup:Loc Editor.Cancel}" />
+                        <Button
+                            Width="120"
+                            Margin="12,0,0,0"
+                            Style="{StaticResource PrimaryActionButtonStyle}"
+                            Command="{Binding SaveCommand}"
+                            Content="{markup:Loc Editor.Save}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
-    </ScrollViewer>
+    </Border>
 </Window>

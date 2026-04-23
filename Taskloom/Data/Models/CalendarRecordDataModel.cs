@@ -49,4 +49,14 @@ public sealed class CalendarRecordDataModel
     /// Место проведения события.
     /// </summary>
     public string? Location { get; set; }
+
+    /// <summary>
+    /// Числовой код статуса события.
+    /// </summary>
+    public int? EventStatusId { get; set; }
+
+    /// <summary>
+    /// Время напоминания до события в минутах.
+    /// </summary>
+    public int? ReminderMinutesBefore { get; set; }
 }

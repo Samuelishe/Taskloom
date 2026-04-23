@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
+using Taskloom.Common.Windowing;
 using Taskloom.Presentation.ViewModels;
 
 namespace Taskloom.Presentation.Views;
@@ -9,11 +10,37 @@ public partial class MainWindow : Window
 {
     private RecordEditorWindow? _editorWindow;
     private SettingsWindow? _settingsWindow;
+    private bool _isWindowPlacementSaved;
+    private bool _isApplicationExitRequested;
+    private bool _isHidingToTray;
 
     public MainWindow()
     {
         InitializeComponent();
+        WindowMaximizeBoundsHelper.Attach(this);
         DataContextChanged += OnDataContextChanged;
+        SourceInitialized += OnSourceInitialized;
+    }
+
+    private async void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        var settings = await App.CurrentApp.SettingsService.LoadAsync();
+
+        if (!settings.HasMainWindowPlacement)
+        {
+            WindowState = WindowState.Maximized;
+            return;
+        }
+
+        Width = Math.Max(MinWidth, settings.MainWindowWidth);
+        Height = Math.Max(MinHeight, settings.MainWindowHeight);
+
+        Left = (SystemParameters.WorkArea.Width - Width) / 2 + SystemParameters.WorkArea.Left;
+        Top = (SystemParameters.WorkArea.Height - Height) / 2 + SystemParameters.WorkArea.Top;
+
+        WindowState = string.Equals(settings.MainWindowState, nameof(System.Windows.WindowState.Maximized), StringComparison.Ordinal)
+            ? WindowState.Maximized
+            : WindowState.Normal;
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -87,7 +114,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var result = MessageBox.Show(
+        var result = System.Windows.MessageBox.Show(
             App.CurrentApp.LocalizationService.Format("MainWindow.DeleteConfirmationMessage", viewModel.SelectedRecord.Title),
             App.CurrentApp.LocalizationService.GetString("MainWindow.DeleteConfirmationTitle"),
             MessageBoxButton.YesNo,
@@ -130,6 +157,24 @@ public partial class MainWindow : Window
 
     private void CloseButton_OnClick(object sender, RoutedEventArgs e)
     {
+        Close();
+    }
+
+    public void RestoreFromTray()
+    {
+        Show();
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+    }
+
+    public void RequestApplicationExit()
+    {
+        _isApplicationExitRequested = true;
         Close();
     }
 
@@ -259,10 +304,62 @@ public partial class MainWindow : Window
         settingsWindow.Close();
     }
 
-    protected override void OnClosing(CancelEventArgs e)
+    protected override async void OnClosing(CancelEventArgs e)
     {
+        if (!_isApplicationExitRequested)
+        {
+            e.Cancel = true;
+
+            if (_isHidingToTray)
+            {
+                return;
+            }
+
+            _isHidingToTray = true;
+
+            try
+            {
+                CloseEditorWindow();
+                CloseSettingsWindow();
+                await SaveWindowPlacementAsync();
+                Hide();
+            }
+            finally
+            {
+                _isHidingToTray = false;
+            }
+
+            return;
+        }
+
+        if (!_isWindowPlacementSaved)
+        {
+            e.Cancel = true;
+            CloseEditorWindow();
+            CloseSettingsWindow();
+            await SaveWindowPlacementAsync();
+            _isWindowPlacementSaved = true;
+            Close();
+            return;
+        }
+
         CloseEditorWindow();
         CloseSettingsWindow();
         base.OnClosing(e);
+    }
+
+    private async Task SaveWindowPlacementAsync()
+    {
+        var settings = await App.CurrentApp.SettingsService.LoadAsync();
+        var bounds = RestoreBounds;
+
+        settings.HasMainWindowPlacement = true;
+        settings.MainWindowWidth = Math.Max(MinWidth, bounds.Width);
+        settings.MainWindowHeight = Math.Max(MinHeight, bounds.Height);
+        settings.MainWindowState = WindowState == WindowState.Maximized
+            ? nameof(System.Windows.WindowState.Maximized)
+            : nameof(System.Windows.WindowState.Normal);
+
+        await App.CurrentApp.SettingsService.SaveAsync(settings);
     }
 }

@@ -15,6 +15,7 @@ public partial class RecordEditorViewModel : ObservableObject
     private readonly Func<RecordEditorViewModel, CancellationToken, Task> _saveAsync;
     private readonly Action _cancel;
     private readonly ILocalizationService _localizationService;
+    private bool _isTimePartSyncing;
 
     private RecordEditorViewModel(
         Func<RecordEditorViewModel, CancellationToken, Task> saveAsync,
@@ -34,6 +35,10 @@ public partial class RecordEditorViewModel : ObservableObject
             new(_localizationService, "RecordType.Event", RecordType.Event),
             new(_localizationService, "RecordType.DaySummary", RecordType.DaySummary)
         };
+        HourOptions = CreateTimePartOptions(0, 23);
+        MinuteSecondOptions = CreateTimePartOptions(0, 59);
+        EventStatusOptions = CreateEventStatusOptions(_localizationService);
+        ReminderOptions = CreateReminderOptions(_localizationService);
 
         _localizationService.LanguageChanged += OnLanguageChanged;
     }
@@ -63,13 +68,31 @@ public partial class RecordEditorViewModel : ObservableObject
     private TimeOnly? endTime;
 
     [ObservableProperty]
-    private string? startTimeText;
+    private int selectedStartHour;
 
     [ObservableProperty]
-    private string? endTimeText;
+    private int selectedStartMinute;
+
+    [ObservableProperty]
+    private int selectedStartSecond;
+
+    [ObservableProperty]
+    private int selectedEndHour;
+
+    [ObservableProperty]
+    private int selectedEndMinute;
+
+    [ObservableProperty]
+    private int selectedEndSecond;
 
     [ObservableProperty]
     private string? location;
+
+    [ObservableProperty]
+    private EventStatus eventStatus = EventStatus.Scheduled;
+
+    [ObservableProperty]
+    private int reminderMinutesBefore = 60;
 
     [ObservableProperty]
     private string editorTitle = string.Empty;
@@ -99,6 +122,14 @@ public partial class RecordEditorViewModel : ObservableObject
     public IRelayCommand CancelCommand { get; }
 
     public ObservableCollection<RecordTypeFilterOptionViewModel> RecordTypeOptions { get; }
+
+    public IReadOnlyList<TimePartOptionViewModel> HourOptions { get; }
+
+    public IReadOnlyList<TimePartOptionViewModel> MinuteSecondOptions { get; }
+
+    public ObservableCollection<EventStatusOptionViewModel> EventStatusOptions { get; }
+
+    public ObservableCollection<ReminderOptionViewModel> ReminderOptions { get; }
 
     public event EventHandler<RecordEditorCloseRequestedEventArgs>? CloseRequested;
 
@@ -140,9 +171,9 @@ public partial class RecordEditorViewModel : ObservableObject
             IsCompleted = draft.IsCompleted,
             StartTime = draft.StartTime,
             EndTime = draft.EndTime,
-            StartTimeText = draft.StartTime?.ToString("HH:mm"),
-            EndTimeText = draft.EndTime?.ToString("HH:mm"),
             Location = draft.Location,
+            EventStatus = draft.EventStatus,
+            ReminderMinutesBefore = draft.ReminderMinutesBefore,
             EditorTitle = localizationService.GetString("Editor.EditTitle")
         };
     }
@@ -152,9 +183,6 @@ public partial class RecordEditorViewModel : ObservableObject
     /// </summary>
     public CalendarRecordDraft ToDraft()
     {
-        var parsedStartTime = TryParseTime(StartTimeText, nameof(StartTimeText));
-        var parsedEndTime = TryParseTime(EndTimeText, nameof(EndTimeText));
-
         return new CalendarRecordDraft
         {
             Id = Id,
@@ -163,9 +191,11 @@ public partial class RecordEditorViewModel : ObservableObject
             Title = Title,
             Details = Details,
             IsCompleted = IsCompleted,
-            StartTime = parsedStartTime,
-            EndTime = parsedEndTime,
-            Location = Location
+            StartTime = StartTime,
+            EndTime = EndTime,
+            Location = Location,
+            EventStatus = EventStatus,
+            ReminderMinutesBefore = ReminderMinutesBefore
         };
     }
 
@@ -186,9 +216,17 @@ public partial class RecordEditorViewModel : ObservableObject
         {
             StartTime = null;
             EndTime = null;
-            StartTimeText = null;
-            EndTimeText = null;
             Location = null;
+            EventStatus = Taskloom.Domain.EventStatus.Scheduled;
+            ReminderMinutesBefore = 60;
+        }
+
+        if (value == RecordType.Event)
+        {
+            StartTime ??= new TimeOnly(9, 0, 0);
+            EndTime ??= new TimeOnly(10, 0, 0);
+            EventStatus = Taskloom.Domain.EventStatus.Scheduled;
+            ReminderMinutesBefore = 60;
         }
     }
 
@@ -206,21 +244,43 @@ public partial class RecordEditorViewModel : ObservableObject
     partial void OnStartTimeChanged(TimeOnly? value)
     {
         ValidationMessage = null;
+        ApplyStartTimeToParts(value);
     }
 
     partial void OnEndTimeChanged(TimeOnly? value)
     {
         ValidationMessage = null;
+        ApplyEndTimeToParts(value);
     }
 
-    partial void OnStartTimeTextChanged(string? value)
+    partial void OnSelectedStartHourChanged(int value)
     {
-        ValidationMessage = null;
+        UpdateStartTimeFromParts();
     }
 
-    partial void OnEndTimeTextChanged(string? value)
+    partial void OnSelectedStartMinuteChanged(int value)
     {
-        ValidationMessage = null;
+        UpdateStartTimeFromParts();
+    }
+
+    partial void OnSelectedStartSecondChanged(int value)
+    {
+        UpdateStartTimeFromParts();
+    }
+
+    partial void OnSelectedEndHourChanged(int value)
+    {
+        UpdateEndTimeFromParts();
+    }
+
+    partial void OnSelectedEndMinuteChanged(int value)
+    {
+        UpdateEndTimeFromParts();
+    }
+
+    partial void OnSelectedEndSecondChanged(int value)
+    {
+        UpdateEndTimeFromParts();
     }
 
     partial void OnIsSavingChanged(bool value)
@@ -265,21 +325,6 @@ public partial class RecordEditorViewModel : ObservableObject
         CloseRequested?.Invoke(this, new RecordEditorCloseRequestedEventArgs(false));
     }
 
-    private static TimeOnly? TryParseTime(string? value, string propertyName)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        if (TimeOnly.TryParseExact(value.Trim(), "HH:mm", out var parsedValue))
-        {
-            return parsedValue;
-        }
-
-        throw new InvalidOperationException(propertyName);
-    }
-
     private string? Validate()
     {
         if (string.IsNullOrWhiteSpace(Title))
@@ -292,31 +337,12 @@ public partial class RecordEditorViewModel : ObservableObject
             return null;
         }
 
-        TimeOnly? startTime;
-        TimeOnly? endTime;
-
-        try
-        {
-            startTime = TryParseTime(StartTimeText, nameof(StartTimeText));
-            endTime = TryParseTime(EndTimeText, nameof(EndTimeText));
-        }
-        catch (InvalidOperationException exception)
-        {
-            var labelKey = exception.Message == nameof(StartTimeText)
-                ? "Editor.StartTime"
-                : "Editor.EndTime";
-
-            return _localizationService.Format(
-                "Editor.Validation.TimeFormat",
-                _localizationService.GetString(labelKey));
-        }
-
-        if (startTime is null || endTime is null)
+        if (StartTime is null || EndTime is null)
         {
             return _localizationService.GetString("Editor.Validation.EventTimesRequired");
         }
 
-        if (endTime <= startTime)
+        if (EndTime <= StartTime)
         {
             return _localizationService.GetString("Editor.Validation.EventEndAfterStart");
         }
@@ -329,5 +355,105 @@ public partial class RecordEditorViewModel : ObservableObject
         EditorTitle = Id.HasValue
             ? _localizationService.GetString("Editor.EditTitle")
             : _localizationService.GetString("Editor.NewTitle");
+    }
+
+    private void ApplyStartTimeToParts(TimeOnly? value)
+    {
+        if (value is null || _isTimePartSyncing)
+        {
+            return;
+        }
+
+        _isTimePartSyncing = true;
+
+        try
+        {
+            SelectedStartHour = value.Value.Hour;
+            SelectedStartMinute = value.Value.Minute;
+            SelectedStartSecond = value.Value.Second;
+        }
+        finally
+        {
+            _isTimePartSyncing = false;
+        }
+    }
+
+    private void ApplyEndTimeToParts(TimeOnly? value)
+    {
+        if (value is null || _isTimePartSyncing)
+        {
+            return;
+        }
+
+        _isTimePartSyncing = true;
+
+        try
+        {
+            SelectedEndHour = value.Value.Hour;
+            SelectedEndMinute = value.Value.Minute;
+            SelectedEndSecond = value.Value.Second;
+        }
+        finally
+        {
+            _isTimePartSyncing = false;
+        }
+    }
+
+    private void UpdateStartTimeFromParts()
+    {
+        if (_isTimePartSyncing || !IsEvent)
+        {
+            return;
+        }
+
+        StartTime = new TimeOnly(SelectedStartHour, SelectedStartMinute, SelectedStartSecond);
+    }
+
+    private void UpdateEndTimeFromParts()
+    {
+        if (_isTimePartSyncing || !IsEvent)
+        {
+            return;
+        }
+
+        EndTime = new TimeOnly(SelectedEndHour, SelectedEndMinute, SelectedEndSecond);
+    }
+
+    private static IReadOnlyList<TimePartOptionViewModel> CreateTimePartOptions(int minValue, int maxValue)
+    {
+        var options = new List<TimePartOptionViewModel>();
+
+        for (var value = minValue; value <= maxValue; value++)
+        {
+            options.Add(new TimePartOptionViewModel(value));
+        }
+
+        return options;
+    }
+
+    private static ObservableCollection<EventStatusOptionViewModel> CreateEventStatusOptions(ILocalizationService localizationService)
+    {
+        return new ObservableCollection<EventStatusOptionViewModel>
+        {
+            new(localizationService, "EventStatus.Scheduled", EventStatus.Scheduled),
+            new(localizationService, "EventStatus.Completed", EventStatus.Completed),
+            new(localizationService, "EventStatus.Rescheduled", EventStatus.Rescheduled),
+            new(localizationService, "EventStatus.Canceled", EventStatus.Canceled)
+        };
+    }
+
+    private static ObservableCollection<ReminderOptionViewModel> CreateReminderOptions(ILocalizationService localizationService)
+    {
+        return new ObservableCollection<ReminderOptionViewModel>
+        {
+            new(localizationService, "Reminder.AtStart", 0),
+            new(localizationService, "Reminder.Before5Minutes", 5),
+            new(localizationService, "Reminder.Before10Minutes", 10),
+            new(localizationService, "Reminder.Before15Minutes", 15),
+            new(localizationService, "Reminder.Before30Minutes", 30),
+            new(localizationService, "Reminder.Before1Hour", 60),
+            new(localizationService, "Reminder.Before2Hours", 120),
+            new(localizationService, "Reminder.Before1Day", 1440)
+        };
     }
 }

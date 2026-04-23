@@ -105,8 +105,6 @@ public partial class SettingsViewModel : ObservableObject
             await _settingsService.SaveAsync(settings, cancellationToken);
             await _localizationService.SetCultureAsync(SelectedLanguage.CultureName, cancellationToken);
             _themeService.ApplyTheme(SelectedTheme.ThemeId);
-
-            CloseRequested?.Invoke(this, new SettingsCloseRequestedEventArgs(true));
         }
         catch (Exception exception)
         {

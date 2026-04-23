@@ -734,3 +734,744 @@
 - Настройки относятся к окну приложения в целом, поэтому в кастомной шапке они логичнее, чем рядом с выбранной датой.
 - Бейдж выбранной даты был лишним после усиления даты в шапке и рабочем блоке.
 - Календарный контейнер должен помогать календарю, а не создавать лишнюю пустую рамку вокруг него.
+
+## 2026-04-23 - Упрощение календарной панели
+
+### Что сделано
+
+- Убран отдельный верхний контейнер с датой в левой панели.
+- Дата оставлена в кастомной шапке и в правом заголовке списка записей.
+- Статус и кнопки `Предыдущий день` / `Следующий день` перенесены в общий внешний контейнер календарной панели.
+- Убран отдельный внутренний контейнер календаря, чтобы не создавать лишнюю рамку вокруг `Calendar`.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/Architecture.md`
+
+### Обоснование
+
+- Левая панель должна быть компактной и calendar-first, без контейнеров внутри контейнеров.
+- Дублирующая дата в блоке навигации создавала лишний визуальный вес, потому что текущая дата уже видна в шапке и в списке записей.
+
+## 2026-04-23 - Доводка календарной панели и выбор времени события
+
+### Что сделано
+
+- Левая календарная панель перестроена в более устойчивую композицию: статус сверху, календарь по центру, навигационные кнопки снизу.
+- Для стандартного `Calendar` добавлены локальные прозрачные ресурсы, чтобы убрать белую подложку/рамку вокруг календаря.
+- Ручной ввод времени события заменён на `ComboBox` с 15-минутными интервалами.
+- Убраны свойства `StartTimeText` и `EndTimeText` из `RecordEditorViewModel`.
+- Убраны локализационные ключи старой подсказки и валидации формата `HH:mm`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/ViewModels/TimeOptionViewModel.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Навигация по дням и статус относятся к календарной панели, но им нужна понятная иерархия, иначе панель выглядит собранной случайно.
+- Для события время должно выбираться интерфейсом, а не вводиться строкой с ручной проверкой формата.
+
+## 2026-04-23 - Отображение места события в карточке
+
+### Что сделано
+
+- В `RecordListItemViewModel` добавлено отображаемое поле `LocationDisplay` и признак `HasLocation`.
+- Для `EventRecord` место теперь форматируется через локализацию и выводится в карточке события.
+- В XAML карточки добавлена отдельная строка места между заголовком и описанием.
+- Добавлены локализационные ключи `RecordList.EventLocation` для русского и английского языков.
+- В план добавлены дальнейшие идеи развития событий: длительность, напоминания, повторы, категории, ссылки и участники.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Если приложение позволяет указать место события, эта информация должна быть видна в основном календарном сценарии.
+- Расширять событие новыми persisted-полями без решения по миграциям SQLite преждевременно.
+
+## 2026-04-23 - Статусы событий и напоминания Windows
+
+### Что сделано
+
+- Добавлен доменный enum `EventStatus`: запланировано, прошло, перенесено, отменено.
+- `EventRecord` расширен статусом события и временем напоминания до начала события.
+- `CalendarRecordDraft`, `CalendarRecordDataModel`, SQLite schema и репозиторий расширены persisted-полями события.
+- Для существующей SQLite базы добавлена проверка и добавление колонок `event_status_id` и `reminder_minutes_before`.
+- В редактор события добавлены селекторы статуса и напоминания; значение по умолчанию для напоминания: за 1 час.
+- В карточке события добавлен цветной status chip.
+- В темы добавлены semantic resources для info/warning статусов.
+- Добавлен `WindowsBalloonEventReminderService`, который показывает Windows-напоминание через `NotifyIcon.ShowBalloonTip` для запланированных событий.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Taskloom.csproj`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Domain/EventStatus.cs`
+- `Taskloom/Domain/EventRecord.cs`
+- `Taskloom/Services/Records/CalendarRecordDraft.cs`
+- `Taskloom/Services/Notifications/IEventReminderService.cs`
+- `Taskloom/Infrastructure/Notifications/WindowsBalloonEventReminderService.cs`
+- `Taskloom/Infrastructure/Storage/SqliteDatabaseInitializer.cs`
+- `Taskloom/Infrastructure/Repositories/SqliteCalendarRecordRepository.cs`
+- `Taskloom/Data/Models/CalendarRecordDataModel.cs`
+- `Taskloom/Data/Sql/CreateSchema.sql`
+- `Taskloom/Presentation/ViewModels/EventStatusOptionViewModel.cs`
+- `Taskloom/Presentation/ViewModels/ReminderOptionViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Assets/Themes/WarmLightTheme.xaml`
+- `Taskloom/Assets/Themes/NeutralLightTheme.xaml`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Статус события и напоминание являются частью сущности события, поэтому должны проходить через домен, persistence и UI, а не быть временным состоянием экрана.
+- `NotifyIcon.ShowBalloonTip` выбран как MVP-реализация Windows-уведомления без добавления тяжёлой Windows App SDK-инфраструктуры.
+
+## 2026-04-23 - Запоминание размера и состояния главного окна
+
+### Что сделано
+
+- `AppSettings` расширен параметрами placement главного окна: наличие сохранённого состояния, ширина, высота и состояние окна.
+- При первом запуске без сохранённых параметров главное окно открывается в состоянии `Maximized`.
+- При следующих запусках сохранённый размер применяется и окно центрируется на рабочей области экрана.
+- При закрытии сохраняется последнее состояние окна: `Normal` или `Maximized`.
+- Координаты окна намеренно не сохраняются, чтобы приложение не открылось вне экрана после смены конфигурации мониторов.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Services/Settings/AppSettings.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Размер и состояние окна относятся к пользовательским настройкам приложения, поэтому должны храниться в JSON-настройках, а не в SQLite.
+- Центрирование восстановленного размера надёжнее сохранения координат при изменении количества или расположения мониторов.
+
+## 2026-04-23 - Исправление зависания при закрытии приложения
+
+### Что сделано
+
+- Убрано синхронное ожидание `AppSettingsService.LoadAsync()` и `SaveAsync()` из `MainWindow.OnClosing`.
+- Закрытие окна переведено на безопасный async-сценарий: первое закрытие отменяется, placement сохраняется, затем окно закрывается повторно.
+- Добавлен флаг, исключающий повторное сохранение placement при повторном вызове `Close()`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- `GetAwaiter().GetResult()` на async file I/O в WPF UI-потоке может вызвать deadlock и полное зависание приложения.
+- Закрытие окна должно сохранять настройки без блокировки message pump.
+
+## 2026-04-23 - Склейка календаря и навигационных кнопок
+
+### Что сделано
+
+- Левая календарная панель переработана: календарь и кнопки `Предыдущий день` / `Следующий день` помещены в один центральный прозрачный блок.
+- Кнопки больше не прибиты к нижнему краю внешней панели и визуально идут сразу под календарём.
+- Убрана третья строка layout, из-за которой навигация уезжала слишком низко на `Maximized`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена без ошибок; предупреждения связаны с тем, что запущенный процесс `Taskloom` держал `Taskloom.exe`.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Календарь и навигация по дням являются одним рабочим блоком и не должны визуально разъезжаться по высоте панели.
+- Внутренние контейнеры должны оставаться прозрачными, чтобы не создавать эффект контейнера внутри контейнера.
+
+## 2026-04-23 - Устранение белой подложки стандартного календаря
+
+### Что сделано
+
+- `Calendar` в главном окне перестал быть прозрачным и теперь явно окрашен через `App.SurfaceSecondaryBrush`.
+- Для внутренних элементов `CalendarItem`, `CalendarButton` и `CalendarDayButton` добавлены theme-aware стили.
+- Дополнительно внутри `Calendar.Resources` переопределены системные кисти `SystemColors.WindowBrushKey`, `ControlBrushKey`, `HighlightBrushKey` и связанные ресурсы, потому что стандартный шаблон WPF продолжал брать белый фон из системной темы.
+- После проверки стало ясно, что стандартный `CalendarItem` рисует белую подложку глубже, поэтому добавлен локальный `ControlTemplate` для `CalendarItem` с theme-aware фоном.
+- После повторной проверки добавлен локальный `CalendarPanelStyle`, который переопределяет template самого `Calendar` и убирает внешний стандартный border.
+- Белая системная подложка стандартного WPF `Calendar` заменена фоном текущей темы.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Простая прозрачность не убирала внутренний фон шаблона `CalendarItem`.
+- Локальный template надёжнее, чем попытка маскировать белую область внешним контейнером или системными brush-ресурсами.
+
+## 2026-04-23 - Добавление тёмных тем
+
+### Что сделано
+
+- Добавлена тема `SoftDarkTheme.xaml`: светло-серая тёмная схема со светлыми текстовыми кистями.
+- Добавлена тема `DeepDarkTheme.xaml`: тёмно-серая схема со светлыми текстовыми кистями.
+- `ThemeIds` расширен идентификаторами `soft-dark` и `deep-dark`.
+- `ThemeService` подключает новые темы в список доступных схем.
+- Добавлены русские и английские названия новых тем.
+- Для новых тем задан полный набор ресурсов `App.*Brush`, включая status/chip palettes.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Assets/Themes/SoftDarkTheme.xaml`
+- `Taskloom/Assets/Themes/DeepDarkTheme.xaml`
+- `Taskloom/Infrastructure/Theming/ThemeIds.cs`
+- `Taskloom/Infrastructure/Theming/ThemeService.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Тёмные темы реализованы через существующий theme layer без новой инфраструктуры.
+- Полный набор кистей нужен, чтобы карточки, chips, статусы, календарь и окна не выпадали в системные цвета.
+
+## 2026-04-23 - Светло-серая тема и переименование тёмных тем
+
+### Что сделано
+
+- Добавлена светло-серая светлая тема `GrayLightTheme.xaml` с тёмными текстовыми кистями.
+- Добавлен идентификатор `ThemeIds.GrayLight`.
+- `ThemeService` подключает новую тему в список доступных схем.
+- Тема `SoftDark` переименована для пользователя в `Графитовая`.
+- Тема `DeepDark` переименована для пользователя в `Глубокая тёмная`.
+- Добавлены английские названия `Gray light`, `Graphite`, `Deep dark`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Assets/Themes/GrayLightTheme.xaml`
+- `Taskloom/Infrastructure/Theming/ThemeIds.cs`
+- `Taskloom/Infrastructure/Theming/ThemeService.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Пользовательское название темы должно описывать реальный визуальный характер.
+- Светлая серая тема должна быть отдельной light-схемой, а не переименованием тёмной темы.
+
+## 2026-04-23 - Исправление читаемости тёмных тем
+
+### Что сделано
+
+- Добавлен глобальный theme-aware template для `ComboBoxItem`, чтобы выпадающие списки не использовали светлый системный popup с нечитаемым светлым текстом.
+- У календаря удалены локальные системные кисти, жёстко заданные под светлую тему.
+- Для `CalendarButton` и `CalendarDayButton` добавлены локальные templates с hover, selected и today состояниями.
+- В тёмных темах усилен контраст `SurfaceMuted`, `SurfaceHover`, `SurfaceSelected`, `BorderBrush` и `BorderStrongBrush`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/App.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Assets/Themes/SoftDarkTheme.xaml`
+- `Taskloom/Assets/Themes/DeepDarkTheme.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Стандартные WPF popup-элементы не наследуют тему приложения полностью, поэтому для тёмных тем им нужен явный template.
+- Контраст кнопок в тёмных темах должен быть выше, чем в светлых, иначе вторичные кнопки сливаются с фоном панели.
+
+## 2026-04-23 - Исправление закрытого состояния ComboBox и чисел календаря
+
+### Что сделано
+
+- Добавлен глобальный theme-aware template для закрытого состояния `ComboBox`.
+- Выбранное значение `ComboBox` теперь рисуется через `App.TextPrimaryBrush`, а не системным цветом.
+- Popup `ComboBox` продолжает использовать theme brushes и общий `ComboBoxItem` template.
+- В templates календарных кнопок добавлен явный `TextElement.Foreground` для чисел.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/App.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- В WPF закрытое состояние `ComboBox` и выпадающие элементы стилизуются разными частями шаблона.
+- Числа календаря должны получать foreground из темы явно, иначе в тёмной теме может остаться системный тёмный цвет.
+
+## 2026-04-23 - Исправление поля даты в тёмных темах
+
+### Что сделано
+
+- Для `DatePicker` добавлены theme-aware `Foreground`, `Background` и `BorderBrush`.
+- Для внутреннего `DatePickerTextBox` добавлены theme-aware `Foreground`, `Background`, `BorderBrush` и `SelectionBrush`.
+- Для `DatePickerTextBox` добавлен собственный `ControlTemplate`, чтобы убрать белую рамку стандартного шаблона.
+- Для `DatePicker` добавлен собственный template с фиксированной кнопкой открытия календаря.
+- Поле даты в редакторе ограничено шириной 220px, чтобы оно не растягивалось на всю форму.
+- Popup-календарь `DatePicker` переведён на theme-aware templates для `Calendar` и `CalendarItem`.
+- Popup-календарь `DatePicker` привязан через `CalendarStyle` и обязательную часть `PART_Calendar`, чтобы WPF не подставлял стандартный белый календарь.
+- Ширина поля даты увеличена до 260px.
+- Внешний border popup-календаря `DatePicker` сделан прозрачным, чтобы убрать белую рамку вокруг календаря.
+- Исправлена передача `CalendarItemStyle` в `PART_CalendarItem` внутри `ThemedPopupCalendarStyle`; без этого DatePicker использовал стандартный белый `CalendarItem`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/App.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- `DatePicker` использует внутренний `DatePickerTextBox`, который не исправляется стилями `ComboBox`.
+- Поля ввода даты должны явно брать цвета из текущей темы.
+
+## 2026-04-23 - Нейтрализация акцентов тёмных тем
+
+### Что сделано
+
+- В тёмных темах primary, selected, task и info акценты переведены из сине-голубой гаммы в нейтрально-серую.
+- Обновлены `AccentPrimary`, `AccentPrimaryHover`, `AccentPrimaryPressed`, `BorderSelected`, `SelectionStripe`, `AccentTask`, `StatusInfo*`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Assets/Themes/SoftDarkTheme.xaml`
+- `Taskloom/Assets/Themes/DeepDarkTheme.xaml`
+- `Taskloom/App.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Сине-голубые акценты визуально конфликтовали с графитовой тёмной темой.
+- Нейтрально-серый акцент лучше поддерживает характер тёмной темы и не перетягивает внимание.
+
+## 2026-04-23 - Исправление читаемости чисел календаря
+
+### Что сделано
+
+- В основном календаре `CalendarButton` и `CalendarDayButton` заменили `ContentPresenter` на явный `TextBlock`.
+- В popup-календаре `DatePicker` добавлены templates для `CalendarButton` и `CalendarDayButton` с явным `TextBlock`.
+- Текст календарных кнопок теперь берёт `Foreground` через `TemplateBinding`, а не через системный presenter.
+- Для главного календаря цвет чисел задан напрямую через `App.TextPrimaryBrush`, потому что `TemplateBinding Foreground` не изменил визуальное состояние стандартных `CalendarDayButton`.
+- Для главного календаря стили `CalendarButton` и `CalendarDayButton` вынесены в ресурсы окна и явно подключены через свойства `CalendarButtonStyle` и `CalendarDayButtonStyle`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/App.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- `ContentPresenter` внутри шаблона календарных кнопок не гарантировал применение theme foreground к сгенерированному тексту.
+- Для тёмных тем цифры календаря должны явно наследовать `App.TextPrimaryBrush` через свойство `Foreground`.
+
+## 2026-04-23 - Custom title bar вспомогательных окон
+
+### Что сделано
+
+- У окна настроек убрана стандартная системная шапка.
+- У окна редактора записи убрана стандартная системная шапка.
+- Для обоих вспомогательных окон добавлена кастомная верхняя область в стиле приложения.
+- Сохранено перетаскивание окон за кастомную верхнюю область.
+- В редакторе записи сохранена возможность разворачивания/восстановления двойным кликом по кастомной шапке.
+- Из настроек убрана внутренняя кнопка `Закрыть`; закрытие выполняется крестиком в кастомной шапке.
+- Кнопка `Применить` в настройках теперь только сохраняет и применяет язык/тему, не закрывая окно.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/Views/SettingsWindow.xaml`
+- `Taskloom/Presentation/Views/SettingsWindow.xaml.cs`
+- `Taskloom/Presentation/ViewModels/SettingsViewModel.cs`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Вспомогательные окна должны визуально совпадать с главным окном и текущими темами.
+- `Применить` в настройках не должно закрывать окно, потому что это действие сохранения, а не навигации.
+
+## 2026-04-23 - Исправление параметров редактора записи
+
+### Что сделано
+
+- Блок `Параметры задачи` теперь скрывается целиком, если выбран не тип `Задача`.
+- Для `CheckBox` выполнения задачи явно задан theme-aware цвет текста.
+- Убрано локальное скрытие только самого `CheckBox`, из-за которого в событии оставался пустой блок параметров задачи.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Условная видимость параметров типа должна применяться к контейнеру всего блока, иначе редактор показывает пустые и нерелевантные секции.
+- Текст интерактивных элементов должен брать цвет из текущей темы.
+
+## 2026-04-23 - Контрастная оболочка вспомогательных окон
+
+### Что сделано
+
+- Для окна настроек добавлена внешняя контрастная рамка на `App.BorderStrongBrush`.
+- Для окна редактора записи добавлена внешняя контрастная рамка на `App.BorderStrongBrush`.
+- Тело вспомогательных окон переведено на `App.SurfacePrimaryBrush`.
+- Кастомная шапка вспомогательных окон переведена на `App.SurfaceSecondaryBrush`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/Views/SettingsWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- После удаления системной рамки вспомогательные окна визуально сливались с фоном приложения.
+- Контраст должен задаваться через существующий theme layer, а не через жёсткий цвет, чтобы решение работало во всех темах.
+
+## 2026-04-23 - Нормальный размер редактора записи
+
+### Что сделано
+
+- Стартовый размер `RecordEditorWindow` увеличен до более подходящего для длинной формы.
+- Минимальный размер редактора увеличен, чтобы окно не открывалось в слишком сжатом состоянии.
+- Высота редактора ограничивается рабочей областью экрана при инициализации окна.
+- Нижняя панель с кнопками `Отмена` и `Сохранить` вынесена из прокручиваемой области.
+- Сообщение валидации перенесено в закреплённую нижнюю панель над кнопками.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Длинная форма события не должна открываться в размере, где критичные кнопки сразу оказываются за скроллом.
+- При нехватке места прокручиваться должна основная форма, а действия сохранения и отмены должны оставаться доступными.
+
+## 2026-04-23 - Добавление стилизационных тем ОС
+
+### Что сделано
+
+- Добавлена тема `Windows11Theme.xaml` с чистой светлой Mica-like палитрой и синим акцентом.
+- Добавлена тема `UbuntuTheme.xaml` с тёмной aubergine-палитрой и оранжевым акцентом.
+- Добавлена тема `Windows7Theme.xaml` со светлой Aero-like голубой палитрой.
+- Добавлена тема `MacOsTheme.xaml` со светлой aqua/graphite палитрой.
+- Добавлены идентификаторы новых тем в `ThemeIds`.
+- Новые темы подключены в `ThemeService`.
+- Добавлены русские и английские названия новых тем.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Assets/Themes/Windows11Theme.xaml`
+- `Taskloom/Assets/Themes/UbuntuTheme.xaml`
+- `Taskloom/Assets/Themes/Windows7Theme.xaml`
+- `Taskloom/Assets/Themes/MacOsTheme.xaml`
+- `Taskloom/Infrastructure/Theming/ThemeIds.cs`
+- `Taskloom/Infrastructure/Theming/ThemeService.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Новые темы реализованы через существующий WPF `ResourceDictionary` layer, без новых UI-абстракций.
+- Темы являются аккуратными цветовыми стилизациями под узнаваемые палитры ОС, а не попыткой копировать системные контролы.
+
+## 2026-04-23 - Коррекция maximized-границ безрамочных окон
+
+### Что сделано
+
+- Добавлен `WindowMaximizeBoundsHelper` для обработки `WM_GETMINMAXINFO`.
+- Главное окно подключает helper, чтобы `Maximized` ограничивался рабочей областью монитора.
+- Окно редактора записи подключает helper, потому что оно тоже поддерживает разворачивание.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Common/Windowing/WindowMaximizeBoundsHelper.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- У безрамочного WPF-окна стандартное разворачивание может использовать полный размер монитора и заходить под панель задач.
+- Обработка `WM_GETMINMAXINFO` задаёт `MaxPosition` и `MaxSize` по рабочей области конкретного монитора.
+
+## 2026-04-23 - Добавление авторских визуальных тем
+
+### Что сделано
+
+- Добавлена тема `FrogGreenTheme.xaml`: салатово-зелёная палитра с болотным frog vibe.
+- Добавлена тема `VolcanicFireTheme.xaml`: тёмная вулканическая палитра с рыжими, жёлтыми и красными lava-акцентами.
+- Добавлена тема `CosmicColdTheme.xaml`: холодная космическая палитра с чёрным, тёмно-фиолетовым, сиреневым и белыми star-like акцентами.
+- Добавлена тема `SnowWhiteTheme.xaml`: почти белая soft low-contrast палитра с едва голубоватым холодным оттенком.
+- Добавлены идентификаторы новых тем в `ThemeIds`.
+- Новые темы подключены в `ThemeService`.
+- Добавлены русские и английские названия новых тем.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Assets/Themes/FrogGreenTheme.xaml`
+- `Taskloom/Assets/Themes/VolcanicFireTheme.xaml`
+- `Taskloom/Assets/Themes/CosmicColdTheme.xaml`
+- `Taskloom/Assets/Themes/SnowWhiteTheme.xaml`
+- `Taskloom/Infrastructure/Theming/ThemeIds.cs`
+- `Taskloom/Infrastructure/Theming/ThemeService.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Новые визуальные направления реализованы через существующий theme layer и не требуют новых UI-абстракций.
+- Каждая тема задаёт полный набор базовых, акцентных и semantic-кистей, чтобы интерфейс не выпадал в цвета другой темы.
+
+## 2026-04-23 - Точный выбор времени события
+
+### Что сделано
+
+- Выбор времени начала и окончания события заменён с одного `ComboBox` интервалов на три селектора: часы, минуты, секунды.
+- Добавлен `TimePartOptionViewModel` для форматированного отображения значений `00-59` и `00-23`.
+- Удалён `TimeOptionViewModel`, потому что список 15-минутных интервалов больше не используется.
+- `RecordEditorViewModel` синхронизирует выбранные части времени с внутренними `StartTime` и `EndTime` типа `TimeOnly?`.
+- Для нового события при переключении типа задаётся безопасное время по умолчанию: `09:00:00` - `10:00:00`.
+- Убрана причина отображения сырого типизированного значения в закрытом поле `ComboBox`.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/ViewModels/TimePartOptionViewModel.cs`
+- `Taskloom/Presentation/ViewModels/TimeOptionViewModel.cs`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Событие должно поддерживать точный выбор времени, а не только грубые 15-минутные интервалы.
+- UI не должен показывать пользователю внутреннее представление `TimeOnly`/nullable-значения.
+
+## 2026-04-23 - Исправление отображения селекторов времени
+
+### Что сделано
+
+- Для `TimePartOptionViewModel` добавлено переопределение `ToString()`, возвращающее форматированный `Title`.
+- Закрытое состояние `ComboBox` селектора времени теперь должно показывать `00`, `09`, `30`, а не имя класса option-модели.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/ViewModels/TimePartOptionViewModel.cs`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Текущий theme-aware template `ComboBox` в закрытом состоянии может получать сам объект выбранного элемента.
+- Option-модель должна иметь безопасное строковое представление для UI, чтобы не показывать техническое имя типа.
+
+## 2026-04-23 - Подготовка уведомлений к Windows 11 notification flow
+
+### Что сделано
+
+- Добавлен интерфейс `IAppNotificationService` для транспорта локальных уведомлений.
+- Добавлена временная реализация `WindowsBalloonAppNotificationService` поверх tray balloon.
+- `WindowsBalloonEventReminderService` больше не владеет `NotifyIcon` напрямую.
+- Для событий добавлено отдельное уведомление `Событие началось`.
+- Логика напоминания больше не показывает просроченное напоминание задним числом: уведомление срабатывает только в коротком окне после целевого времени.
+- Частота проверки напоминаний увеличена до 15 секунд.
+- Добавлены локализационные строки для уведомления о начале события.
+- В план добавлен этап Windows App SDK notifications, tray mode, task reminders и временной иконки.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Services/Notifications/IAppNotificationService.cs`
+- `Taskloom/Infrastructure/Notifications/WindowsBalloonAppNotificationService.cs`
+- `Taskloom/Infrastructure/Notifications/WindowsBalloonEventReminderService.cs`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Windows 11 notification center требует нормального app notification transport, а tray balloon остаётся временным fallback.
+- Событию нужны два разных пользовательских сигнала: предварительное напоминание и факт начала.
+- Планировщик уведомлений не должен быть связан с конкретным UI-транспортом.
+
+## 2026-04-23 - Восстановление сборки после прерванного Windows App SDK restore
+
+### Что сделано
+
+- Незавершённое подключение `Microsoft.WindowsAppSDK` откатили из `Taskloom.csproj`.
+- Временная реализация `WindowsAppSdkNotificationService` удалена.
+- `App` снова использует временный `WindowsBalloonAppNotificationService`.
+- Выполнен `dotnet restore .\Taskloom.sln` для пересоздания `project.assets.json` под `net10.0-windows`.
+- Сборка `dotnet build .\Taskloom.sln --no-restore` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Taskloom.csproj`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Infrastructure/Notifications/WindowsAppSdkNotificationService.cs`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Прерванный restore оставил `obj/project.assets.json` под временно изменённый TargetFramework, из-за чего IDE и сборка показывали массовые ошибки.
+- Подключение Windows App SDK нужно делать отдельным контролируемым шагом, чтобы не оставлять проект в полусобранном состоянии.
+
+## 2026-04-23 - Tray mode и временная иконка
+
+### Что сделано
+
+- Создана временная иконка приложения `Assets/Icons/Taskloom.ico`.
+- Иконка подключена как `ApplicationIcon` в `Taskloom.csproj`.
+- Иконка подключена к главному окну, окну настроек и редактору записи.
+- Добавлен `WindowsTrayService`, который владеет единственным `NotifyIcon`.
+- Добавлено tray menu: `Открыть`, `Настройки`, `Выход`.
+- Двойной клик по tray icon восстанавливает главное окно.
+- Крестик главного окна теперь скрывает приложение в трей вместо завершения процесса.
+- Реальное завершение приложения выполняется через `Выход` в tray menu.
+- `WindowsBalloonAppNotificationService` использует общий tray icon и больше не создаёт отдельный `NotifyIcon`.
+- Сборка `dotnet build .\Taskloom.sln --no-restore` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Assets/Icons/Taskloom.ico`
+- `Taskloom/Infrastructure/Tray/WindowsTrayService.cs`
+- `Taskloom/Infrastructure/Notifications/WindowsBalloonAppNotificationService.cs`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/Presentation/Views/SettingsWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Taskloom.csproj`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Taskloom должен оставаться активным в фоне для напоминаний, поэтому закрытие окна не должно автоматически завершать приложение.
+- Tray icon должен быть единым местом управления фоновым режимом и временными balloon-уведомлениями.

@@ -23,7 +23,7 @@ public sealed class LocExtension : MarkupExtension
 
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
-        return new Binding($"[{Key}]")
+        return new System.Windows.Data.Binding($"[{Key}]")
         {
             Source = LocalizationManager.Source,
             Mode = BindingMode.OneWay

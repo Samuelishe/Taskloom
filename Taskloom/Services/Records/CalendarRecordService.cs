@@ -101,7 +101,9 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 draft.Details,
                 GetRequiredTime(draft.StartTime, nameof(draft.StartTime)),
                 GetRequiredTime(draft.EndTime, nameof(draft.EndTime)),
-                draft.Location),
+                draft.Location,
+                draft.EventStatus,
+                draft.ReminderMinutesBefore),
 
             RecordType.DaySummary => new DaySummaryRecord(
                 id,
@@ -134,6 +136,8 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 draft.StartTime = eventRecord.StartTime;
                 draft.EndTime = eventRecord.EndTime;
                 draft.Location = eventRecord.Location;
+                draft.EventStatus = eventRecord.Status;
+                draft.ReminderMinutesBefore = eventRecord.ReminderMinutesBefore;
                 break;
         }
 

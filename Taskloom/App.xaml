@@ -67,11 +67,453 @@
             <Setter Property="Background" Value="{DynamicResource App.InputBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton
+                                x:Name="ToggleButton"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Focusable="False"
+                                IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border
+                                            x:Name="RootBorder"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="7">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="32" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <ContentPresenter
+                                                    Margin="10,0,4,0"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                    ContentStringFormat="{Binding SelectionBoxItemStringFormat, RelativeSource={RelativeSource AncestorType=ComboBox}}">
+                                                    <ContentPresenter.Resources>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+                                                        </Style>
+                                                    </ContentPresenter.Resources>
+                                                </ContentPresenter>
+
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="12"
+                                                    Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                    Text="▼" />
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderStrongBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <Popup
+                                x:Name="PART_Popup"
+                                AllowsTransparency="True"
+                                Focusable="False"
+                                IsOpen="{TemplateBinding IsDropDownOpen}"
+                                Placement="Bottom"
+                                PopupAnimation="Fade">
+                                <Border
+                                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    Background="{DynamicResource App.InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                    <ScrollViewer Margin="4" CanContentScroll="True">
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Background" Value="{DynamicResource App.InputBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border
+                            x:Name="RootBorder"
+                            Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}">
+                            <ContentPresenter
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceSelectedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="RootBorder" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ThemedPopupCalendarItemStyle" TargetType="{x:Type CalendarItem}">
+            <Setter Property="Background" Value="{DynamicResource App.SurfaceSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CalendarItem}">
+                        <Border
+                            Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                            BorderBrush="Transparent"
+                            BorderThickness="0">
+                            <Grid
+                                x:Name="PART_Root"
+                                Background="{DynamicResource App.SurfaceSecondaryBrush}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <Grid
+                                    Margin="0,0,0,8"
+                                    Background="{DynamicResource App.SurfaceSecondaryBrush}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="36" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="36" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Button
+                                        x:Name="PART_PreviousButton"
+                                        Grid.Column="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FocusVisualStyle="{x:Null}"
+                                        Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                        Content="‹" />
+
+                                    <Button
+                                        x:Name="PART_HeaderButton"
+                                        Grid.Column="1"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FocusVisualStyle="{x:Null}"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource App.TextPrimaryBrush}" />
+
+                                    <Button
+                                        x:Name="PART_NextButton"
+                                        Grid.Column="2"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FocusVisualStyle="{x:Null}"
+                                        Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                        Content="›" />
+                                </Grid>
+
+                                <Grid
+                                    x:Name="PART_MonthView"
+                                    Grid.Row="1"
+                                    Background="{DynamicResource App.SurfaceSecondaryBrush}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                </Grid>
+
+                                <Grid
+                                    x:Name="PART_YearView"
+                                    Grid.Row="1"
+                                    Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                                    Visibility="Hidden">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ThemedPopupCalendarButtonStyle" TargetType="{x:Type CalendarButton}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CalendarButton}">
+                        <Border
+                            x:Name="RootBorder"
+                            Margin="2"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="7"
+                            Padding="8,6">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontWeight="SemiBold"
+                                Foreground="{TemplateBinding Foreground}"
+                                Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="RootBorder" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ThemedPopupCalendarDayButtonStyle" TargetType="{x:Type CalendarDayButton}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CalendarDayButton}">
+                        <Border
+                            x:Name="RootBorder"
+                            Margin="2"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            Padding="7,5">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{TemplateBinding Foreground}"
+                                Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderStrongBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceSelectedBrush}" />
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderSelectedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsToday" Value="True">
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.AccentPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsInactive" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource App.TextMutedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="RootBorder" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ThemedPopupCalendarStyle" TargetType="{x:Type Calendar}">
+            <Setter Property="Background" Value="{DynamicResource App.SurfaceSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="CalendarItemStyle" Value="{StaticResource ThemedPopupCalendarItemStyle}" />
+            <Setter Property="CalendarButtonStyle" Value="{StaticResource ThemedPopupCalendarButtonStyle}" />
+            <Setter Property="CalendarDayButtonStyle" Value="{StaticResource ThemedPopupCalendarDayButtonStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Calendar}">
+                        <CalendarItem
+                            x:Name="PART_CalendarItem"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Style="{TemplateBinding CalendarItemStyle}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="DatePicker">
             <Setter Property="Background" Value="{DynamicResource App.InputBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="CalendarStyle" Value="{StaticResource ThemedPopupCalendarStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DatePicker">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="38" />
+                            </Grid.ColumnDefinitions>
+
+                            <DatePickerTextBox
+                                x:Name="PART_TextBox"
+                                Grid.Column="0"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Foreground="{TemplateBinding Foreground}"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Center" />
+
+                            <Button
+                                x:Name="PART_Button"
+                                Grid.Column="1"
+                                Margin="6,0,0,0"
+                                Background="{DynamicResource App.SurfaceMutedBrush}"
+                                BorderBrush="{DynamicResource App.BorderBrush}"
+                                BorderThickness="1"
+                                FocusVisualStyle="{x:Null}">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border
+                                            x:Name="RootBorder"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="7">
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                FontFamily="Segoe MDL2 Assets"
+                                                FontSize="13"
+                                                Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                                Text="&#xE787;" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderStrongBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource App.SurfaceSelectedBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <Popup
+                                x:Name="PART_Popup"
+                                AllowsTransparency="True"
+                                Placement="Bottom"
+                                StaysOpen="False"
+                                PopupAnimation="Fade">
+                                <Border
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    Padding="0">
+                                    <Calendar
+                                        x:Name="PART_Calendar"
+                                        Style="{TemplateBinding CalendarStyle}"
+                                        SelectedDate="{Binding SelectedDate, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" />
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="DatePickerTextBox">
+            <Setter Property="Background" Value="{DynamicResource App.InputBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource App.SurfaceSelectedBrush}" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DatePickerTextBox">
+                        <Border
+                            x:Name="RootBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="7">
+                            <ScrollViewer
+                                x:Name="PART_ContentHost"
+                                Margin="{TemplateBinding Padding}"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderStrongBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource App.BorderSelectedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="RootBorder" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="CheckBox">
