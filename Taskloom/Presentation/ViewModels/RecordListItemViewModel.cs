@@ -1,4 +1,5 @@
 using Taskloom.Domain;
+using Taskloom.Services.Localization;
 
 namespace Taskloom.Presentation.ViewModels;
 
@@ -39,37 +40,42 @@ public sealed class RecordListItemViewModel
 
     public bool IsCompleted { get; }
 
+    public bool IsTask => Type == RecordType.Task;
+
     /// <summary>
     /// Создаёт presentation-модель элемента списка из доменной записи.
     /// </summary>
-    public static RecordListItemViewModel Create(CalendarRecord record)
+    public static RecordListItemViewModel Create(CalendarRecord record, ILocalizationService localizationService)
     {
         ArgumentNullException.ThrowIfNull(record);
+        ArgumentNullException.ThrowIfNull(localizationService);
 
         return record switch
         {
             TaskRecord taskRecord => new RecordListItemViewModel(
                 taskRecord.Id,
                 taskRecord.Type,
-                "Task",
+                localizationService.GetString("RecordType.Task"),
                 taskRecord.Title,
                 taskRecord.Details,
-                taskRecord.IsCompleted ? "Completed" : "Pending",
+                taskRecord.IsCompleted
+                    ? localizationService.GetString("RecordList.TaskCompleted")
+                    : localizationService.GetString("RecordList.TaskPending"),
                 taskRecord.IsCompleted),
 
             NoteRecord noteRecord => new RecordListItemViewModel(
                 noteRecord.Id,
                 noteRecord.Type,
-                "Note",
+                localizationService.GetString("RecordType.Note"),
                 noteRecord.Title,
                 noteRecord.Details,
-                "Any time",
+                localizationService.GetString("RecordList.NoteAnyTime"),
                 false),
 
             EventRecord eventRecord => new RecordListItemViewModel(
                 eventRecord.Id,
                 eventRecord.Type,
-                "Event",
+                localizationService.GetString("RecordType.Event"),
                 eventRecord.Title,
                 eventRecord.Details,
                 $"{eventRecord.StartTime:HH\\:mm} - {eventRecord.EndTime:HH\\:mm}",
@@ -78,10 +84,10 @@ public sealed class RecordListItemViewModel
             DaySummaryRecord summaryRecord => new RecordListItemViewModel(
                 summaryRecord.Id,
                 summaryRecord.Type,
-                "Day summary",
+                localizationService.GetString("RecordType.DaySummary"),
                 summaryRecord.Title,
                 summaryRecord.Details,
-                "Summary",
+                localizationService.GetString("RecordList.DaySummaryLabel"),
                 false),
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {record.GetType().Name}.")

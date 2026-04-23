@@ -3,37 +3,478 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:Taskloom.Common.Converters"
+        xmlns:domain="clr-namespace:Taskloom.Domain"
+        xmlns:markup="clr-namespace:Taskloom.Common.Markup"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}"
-        Width="1200"
-        Height="720"
-        MinWidth="960"
-        MinHeight="600">
-    <Grid Background="#FFF7F4EE">
+        Width="1280"
+        Height="820"
+        MinWidth="1080"
+        MinHeight="700"
+        Background="#FFF5F1E8">
+    <Window.Resources>
+        <converters:AdaptiveCardWidthConverter x:Key="AdaptiveCardWidthConverter" />
+
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#FFF9F5EE" />
+        <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#FFF6F0E5" />
+        <SolidColorBrush x:Key="SurfaceSelectedBrush" Color="#FFF0E5D2" />
+        <SolidColorBrush x:Key="BorderBrushSoft" Color="#FFE1D7C7" />
+        <SolidColorBrush x:Key="BorderBrushSelected" Color="#FFC49A64" />
+        <SolidColorBrush x:Key="AccentBrushTask" Color="#FF9B7B53" />
+        <SolidColorBrush x:Key="AccentBrushNote" Color="#FF7D8D66" />
+        <SolidColorBrush x:Key="AccentBrushEvent" Color="#FF7E6E5C" />
+        <SolidColorBrush x:Key="AccentBrushSummary" Color="#FF8C6A74" />
+
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Background" Value="#FFF4ECE0" />
+            <Setter Property="Foreground" Value="#FF3E352D" />
+            <Setter Property="BorderBrush" Value="#FFE1D7C7" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            x:Name="RootBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="12">
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="#FFEADBC7" />
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="#FFD2B38A" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="#FFE0CFB8" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="RootBorder" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#FFB88A59" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#FFB88A59" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FFA87945" />
+                    <Setter Property="BorderBrush" Value="#FFA87945" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#FF986B38" />
+                    <Setter Property="BorderBrush" Value="#FF986B38" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="24">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="360" />
+            <ColumnDefinition Width="24" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
         <Border
-            Margin="24"
-            Padding="32"
-            Background="White"
-            BorderBrush="#FFE0D7C8"
+            Grid.Column="0"
+            Padding="24"
+            Background="#FFFBF8F2"
+            BorderBrush="#FFE1D7C7"
             BorderThickness="1"
-            CornerRadius="16">
+            CornerRadius="18">
             <StackPanel>
-                <TextBlock
-                    FontSize="28"
-                    FontWeight="SemiBold"
-                    Foreground="#FF2F2A24"
-                    Text="{Binding WindowTitle}" />
-                <TextBlock
-                    Margin="0,12,0,0"
-                    FontSize="16"
-                    Foreground="#FF5F574D"
-                    Text="{Binding SelectedDateDisplay}" />
-                <TextBlock
-                    Margin="0,8,0,0"
-                    FontSize="14"
-                    Foreground="#FF7B7268"
-                    Text="{Binding StatusText}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="30"
+                            FontWeight="SemiBold"
+                            Foreground="#FF2F2A24"
+                            Text="{Binding WindowTitle}" />
+                        <TextBlock
+                            Margin="0,10,0,0"
+                            FontSize="16"
+                            Foreground="#FF655C50"
+                            Text="{markup:Loc MainWindow.Tagline}" />
+                    </StackPanel>
+
+                    <Button
+                        Grid.Column="1"
+                        Width="44"
+                        Height="44"
+                        HorizontalAlignment="Right"
+                        Background="#FFF4ECE0"
+                        BorderBrush="#FFE1D7C7"
+                        Command="{Binding OpenSettingsCommand}"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="16"
+                        Style="{StaticResource ActionButtonStyle}"
+                        ToolTip="{markup:Loc Settings.OpenButtonHint}"
+                        Content="&#xE713;" />
+                </Grid>
+
+                <Border
+                    Margin="0,24,0,0"
+                    Padding="16"
+                    Background="#FFFFFCF7"
+                    BorderBrush="#FFE4DCCF"
+                    BorderThickness="1"
+                    CornerRadius="14">
+                    <StackPanel>
+                        <Border
+                            HorizontalAlignment="Left"
+                            Padding="10,5"
+                            Background="#FFF6EFE3"
+                            CornerRadius="999">
+                            <TextBlock
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="#FF8B7F71"
+                                Text="{markup:Loc MainWindow.SelectedDate}" />
+                        </Border>
+                        <TextBlock
+                            Margin="0,10,0,0"
+                            FontSize="24"
+                            FontWeight="SemiBold"
+                            Foreground="#FF2F2A24"
+                            Text="{Binding SelectedDateDisplay}" />
+                        <TextBlock
+                            Margin="0,10,0,0"
+                            FontSize="13"
+                            Foreground="#FF7B7268"
+                            Text="{Binding StatusText}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Margin="0,24,0,0"
+                    Padding="14"
+                    Background="#FFFFFCF7"
+                    BorderBrush="#FFE4DCCF"
+                    BorderThickness="1"
+                    CornerRadius="16">
+                    <Calendar
+                        Background="Transparent"
+                        BorderThickness="0"
+                        SelectedDate="{Binding SelectedDateValue, Mode=TwoWay}">
+                        <Calendar.LayoutTransform>
+                            <ScaleTransform ScaleX="1.18" ScaleY="1.18" />
+                        </Calendar.LayoutTransform>
+                    </Calendar>
+                </Border>
+
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button
+                        Grid.Column="0"
+                        Style="{StaticResource ActionButtonStyle}"
+                        Command="{Binding PreviousDayCommand}"
+                        Content="{markup:Loc MainWindow.PreviousDay}" />
+                    <Button
+                        Grid.Column="2"
+                        Style="{StaticResource ActionButtonStyle}"
+                        Command="{Binding NextDayCommand}"
+                        Content="{markup:Loc MainWindow.NextDay}" />
+                </Grid>
             </StackPanel>
+        </Border>
+
+        <Border
+            Grid.Column="2"
+            Padding="24"
+            Background="White"
+            BorderBrush="#FFE1D7C7"
+            BorderThickness="1"
+            CornerRadius="18">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="220" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="13"
+                            Foreground="#FF8B7F71"
+                            Text="{markup:Loc MainWindow.RecordsForDate}" />
+                        <TextBlock
+                            Margin="0,6,0,0"
+                            FontSize="28"
+                            FontWeight="SemiBold"
+                            Foreground="#FF2F2A24"
+                            Text="{Binding SelectedDateDisplay}" />
+                    </StackPanel>
+
+                    <StackPanel
+                        Grid.Column="1"
+                        HorizontalAlignment="Right">
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="#FF8B7F71"
+                            Text="{markup:Loc MainWindow.Filter}" />
+                        <ComboBox
+                            Width="200"
+                            Margin="0,6,0,0"
+                            ItemsSource="{Binding FilterOptions}"
+                            SelectedItem="{Binding SelectedFilter, Mode=TwoWay}" />
+                    </StackPanel>
+                </Grid>
+
+                <WrapPanel
+                    Grid.Row="1"
+                    Margin="0,20,0,0"
+                    ItemHeight="42"
+                    Orientation="Horizontal">
+                    <Button
+                        MinWidth="130"
+                        Style="{StaticResource PrimaryActionButtonStyle}"
+                        Command="{Binding OpenCreateRecordCommand}"
+                        Content="{markup:Loc MainWindow.NewRecord}" />
+                    <Button
+                        Margin="12,0,0,0"
+                        MinWidth="130"
+                        Style="{StaticResource ActionButtonStyle}"
+                        Command="{Binding OpenEditRecordCommand}"
+                        Content="{markup:Loc MainWindow.EditRecord}" />
+                    <Button
+                        Margin="12,0,0,0"
+                        MinWidth="130"
+                        Style="{StaticResource ActionButtonStyle}"
+                        Click="DeleteRecordButton_OnClick"
+                        Content="{markup:Loc MainWindow.DeleteRecord}" />
+                    <Button
+                        Margin="12,0,0,0"
+                        MinWidth="130"
+                        Style="{StaticResource ActionButtonStyle}"
+                        Command="{Binding RefreshCommand}"
+                        Content="{markup:Loc MainWindow.Refresh}" />
+                </WrapPanel>
+
+                <Grid Grid.Row="2" Margin="0,20,0,0">
+                    <Border
+                        Background="#FFF9F6F0"
+                        BorderBrush="#FFE6DED1"
+                        BorderThickness="1"
+                        CornerRadius="14">
+                        <Grid>
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="16"
+                                Foreground="#FF8B7F71"
+                                Text="{markup:Loc MainWindow.NoRecords}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <ListBox
+                                x:Name="RecordsList"
+                                Margin="14"
+                                ItemsSource="{Binding Records}"
+                                MouseDoubleClick="RecordsList_OnMouseDoubleClick"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                SelectedItem="{Binding SelectedRecord, Mode=TwoWay}">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="Margin" Value="0,0,12,12" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <ContentPresenter />
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="Width">
+                                            <Setter.Value>
+                                                <MultiBinding Converter="{StaticResource AdaptiveCardWidthConverter}">
+                                                    <Binding ElementName="RecordsList" Path="ActualWidth" />
+                                                    <Binding ElementName="RecordsList" Path="Items.Count" />
+                                                </MultiBinding>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.Style>
+                                    <Style TargetType="ListBox">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ListBox.Style>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            MinHeight="172"
+                                            Padding="16"
+                                            Background="{StaticResource SurfaceBrush}"
+                                            BorderBrush="{StaticResource BorderBrushSoft}"
+                                            BorderThickness="1"
+                                            CornerRadius="12">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Type}" Value="{x:Static domain:RecordType.Task}">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrushTask}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Type}" Value="{x:Static domain:RecordType.Note}">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrushNote}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Type}" Value="{x:Static domain:RecordType.Event}">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrushEvent}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Type}" Value="{x:Static domain:RecordType.DaySummary}">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrushSummary}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsMouseOver}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource SurfaceHoverBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource SurfaceSelectedBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSelected}" />
+                                                            <Setter Property="BorderThickness" Value="2" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+
+                                                <Border
+                                                    HorizontalAlignment="Left"
+                                                    Padding="10,5"
+                                                    Background="{StaticResource SurfaceMutedBrush}"
+                                                    CornerRadius="999">
+                                                    <TextBlock
+                                                        FontSize="12"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="#FF6A5E52"
+                                                        Text="{Binding TypeDisplayName}" />
+                                                </Border>
+
+                                                <Border
+                                                    Grid.Column="1"
+                                                    Padding="10,6"
+                                                    Background="#FFF5EFE3"
+                                                    CornerRadius="999">
+                                                    <TextBlock
+                                                        FontSize="12"
+                                                        Foreground="#FF6C6154"
+                                                        Text="{Binding TimeDisplay}" />
+                                                </Border>
+
+                                                <TextBlock
+                                                    Grid.Row="1"
+                                                    Grid.ColumnSpan="2"
+                                                    Margin="0,14,0,0"
+                                                    FontSize="18"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="#FF2F2A24"
+                                                    Text="{Binding Title}"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    TextWrapping="Wrap" />
+
+                                                <TextBlock
+                                                    Grid.Row="2"
+                                                    Margin="0,10,0,0"
+                                                    Foreground="#FF655C50"
+                                                    MaxHeight="84"
+                                                    Text="{Binding Details}"
+                                                    TextTrimming="WordEllipsis"
+                                                    TextWrapping="Wrap" />
+
+                                                <CheckBox
+                                                    Grid.Row="2"
+                                                    Grid.Column="1"
+                                                    Margin="0,12,0,0"
+                                                    VerticalAlignment="Bottom"
+                                                    HorizontalAlignment="Right"
+                                                    IsChecked="{Binding IsCompleted, Mode=OneWay}"
+                                                    IsEnabled="False">
+                                                    <CheckBox.Style>
+                                                        <Style TargetType="CheckBox">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsTask}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </CheckBox.Style>
+                                                </CheckBox>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
         </Border>
     </Grid>
 </Window>

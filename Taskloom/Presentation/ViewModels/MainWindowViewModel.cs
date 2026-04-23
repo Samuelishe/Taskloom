@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Taskloom.Domain;
+using Taskloom.Services.Localization;
 using Taskloom.Services.Records;
+using Taskloom.Services.Settings;
 
 namespace Taskloom.Presentation.ViewModels;
 
@@ -12,15 +14,21 @@ namespace Taskloom.Presentation.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ICalendarRecordService _recordService;
+    private readonly ILocalizationService _localizationService;
+    private readonly IAppSettingsService _settingsService;
     private bool _isInitialized;
 
-    public MainWindowViewModel(ICalendarRecordService recordService)
+    public MainWindowViewModel(
+        ICalendarRecordService recordService,
+        ILocalizationService localizationService,
+        IAppSettingsService settingsService)
     {
         _recordService = recordService ?? throw new ArgumentNullException(nameof(recordService));
+        _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
-        WindowTitle = "Taskloom";
         Records = new ObservableCollection<RecordListItemViewModel>();
-        FilterOptions = CreateFilterOptions();
+        FilterOptions = new ObservableCollection<RecordTypeFilterOptionViewModel>();
 
         LoadRecordsCommand = new AsyncRelayCommand(LoadRecordsAsync);
         OpenCreateRecordCommand = new RelayCommand(OpenCreateRecord);
@@ -29,17 +37,22 @@ public partial class MainWindowViewModel : ObservableObject
         PreviousDayCommand = new RelayCommand(MoveToPreviousDay);
         NextDayCommand = new RelayCommand(MoveToNextDay);
         RefreshCommand = new AsyncRelayCommand(LoadRecordsAsync);
+        OpenSettingsCommand = new RelayCommand(OpenSettings);
+
+        _localizationService.LanguageChanged += OnLanguageChanged;
 
         SelectedDate = DateOnly.FromDateTime(DateTime.Today);
+        UpdateFilterOptions();
         SelectedFilter = FilterOptions[0];
+        StatusText = _localizationService.GetString("MainWindow.Status.LoadNotStarted");
         _isInitialized = true;
     }
 
-    public string WindowTitle { get; }
+    public string WindowTitle => _localizationService.GetString("App.Title");
 
     public ObservableCollection<RecordListItemViewModel> Records { get; }
 
-    public IReadOnlyList<RecordTypeFilterOptionViewModel> FilterOptions { get; }
+    public ObservableCollection<RecordTypeFilterOptionViewModel> FilterOptions { get; }
 
     public IAsyncRelayCommand LoadRecordsCommand { get; }
 
@@ -55,6 +68,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     public IAsyncRelayCommand RefreshCommand { get; }
 
+    public IRelayCommand OpenSettingsCommand { get; }
+
     [ObservableProperty]
     private DateOnly selectedDate;
 
@@ -68,13 +83,22 @@ public partial class MainWindowViewModel : ObservableObject
     private RecordEditorViewModel? activeEditor;
 
     [ObservableProperty]
+    private SettingsViewModel? activeSettings;
+
+    [ObservableProperty]
     private bool isBusy;
 
     [ObservableProperty]
-    private string statusText = "Загрузка записей не выполнялась.";
+    private string statusText = string.Empty;
 
     [ObservableProperty]
     private string selectedDateDisplay = string.Empty;
+
+    public DateTime SelectedDateValue
+    {
+        get => SelectedDate.ToDateTime(TimeOnly.MinValue);
+        set => SelectedDate = DateOnly.FromDateTime(value);
+    }
 
     /// <summary>
     /// Выполняет начальную загрузку данных окна.
@@ -87,6 +111,7 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedDateChanged(DateOnly value)
     {
         SelectedDateDisplay = value.ToString("dd MMMM yyyy");
+        OnPropertyChanged(nameof(SelectedDateValue));
 
         if (_isInitialized)
         {
@@ -134,12 +159,12 @@ public partial class MainWindowViewModel : ObservableObject
 
             foreach (var record in records)
             {
-                Records.Add(RecordListItemViewModel.Create(record));
+                Records.Add(RecordListItemViewModel.Create(record, _localizationService));
             }
 
             StatusText = Records.Count == 0
-                ? "На выбранную дату записей нет."
-                : $"Найдено записей: {Records.Count}.";
+                ? _localizationService.GetString("MainWindow.Status.NoRecords")
+                : _localizationService.Format("MainWindow.Status.RecordsFound", Records.Count);
 
             if (SelectedRecord is not null)
             {
@@ -154,8 +179,12 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OpenCreateRecord()
     {
-        ActiveEditor = RecordEditorViewModel.CreateNew(SelectedDate);
-        StatusText = "Подготовлен черновик новой записи.";
+        ActiveEditor = RecordEditorViewModel.CreateNew(
+            SelectedDate,
+            SaveEditorAsync,
+            CloseEditor,
+            _localizationService);
+        StatusText = _localizationService.GetString("MainWindow.Status.NewRecordPrepared");
     }
 
     private async Task OpenEditRecordAsync()
@@ -169,12 +198,16 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (draft is null)
         {
-            StatusText = "Не удалось найти запись для редактирования.";
+            StatusText = _localizationService.GetString("MainWindow.Status.RecordNotFound");
             return;
         }
 
-        ActiveEditor = RecordEditorViewModel.FromDraft(draft);
-        StatusText = "Подготовлен черновик выбранной записи.";
+        ActiveEditor = RecordEditorViewModel.FromDraft(
+            draft,
+            SaveEditorAsync,
+            CloseEditor,
+            _localizationService);
+        StatusText = _localizationService.GetString("MainWindow.Status.EditRecordPrepared");
     }
 
     private bool CanOpenEditRecord()
@@ -190,7 +223,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         await _recordService.DeleteAsync(SelectedRecord.Id);
-        StatusText = "Запись удалена.";
+        StatusText = _localizationService.GetString("MainWindow.Status.RecordDeleted");
         await LoadRecordsAsync();
     }
 
@@ -209,15 +242,54 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedDate = SelectedDate.AddDays(1);
     }
 
-    private static IReadOnlyList<RecordTypeFilterOptionViewModel> CreateFilterOptions()
+    private void UpdateFilterOptions()
     {
-        return
-        [
-            new RecordTypeFilterOptionViewModel("Все записи", null),
-            new RecordTypeFilterOptionViewModel("Tasks", RecordType.Task),
-            new RecordTypeFilterOptionViewModel("Notes", RecordType.Note),
-            new RecordTypeFilterOptionViewModel("Events", RecordType.Event),
-            new RecordTypeFilterOptionViewModel("Day summaries", RecordType.DaySummary)
-        ];
+        var currentType = SelectedFilter?.RecordType;
+
+        FilterOptions.Clear();
+        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "Filter.All", null));
+        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Task", RecordType.Task));
+        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Note", RecordType.Note));
+        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Event", RecordType.Event));
+        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.DaySummary", RecordType.DaySummary));
+
+        SelectedFilter = FilterOptions.FirstOrDefault(option => option.RecordType == currentType) ?? FilterOptions[0];
+    }
+
+    private async Task SaveEditorAsync(RecordEditorViewModel editor, CancellationToken cancellationToken)
+    {
+        var savedRecord = await _recordService.SaveAsync(editor.ToDraft(), cancellationToken);
+
+        ActiveEditor = null;
+        StatusText = _localizationService.Format("MainWindow.Status.RecordSaved", savedRecord.Title);
+
+        await LoadRecordsAsync(cancellationToken);
+        SelectedRecord = Records.FirstOrDefault(item => item.Id == savedRecord.Id);
+    }
+
+    private void CloseEditor()
+    {
+        ActiveEditor = null;
+        StatusText = _localizationService.GetString("MainWindow.Status.EditorClosed");
+    }
+
+    private void OpenSettings()
+    {
+        ActiveSettings = new SettingsViewModel(_localizationService, _settingsService);
+        StatusText = _localizationService.GetString("MainWindow.Status.SettingsOpened");
+    }
+
+    public void CloseSettings()
+    {
+        ActiveSettings = null;
+        StatusText = _localizationService.GetString("MainWindow.Status.SettingsClosed");
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(WindowTitle));
+        SelectedDateDisplay = SelectedDate.ToString("dd MMMM yyyy");
+        UpdateFilterOptions();
+        _ = LoadRecordsCommand.ExecuteAsync(null);
     }
 }

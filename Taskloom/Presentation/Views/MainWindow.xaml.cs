@@ -1,11 +1,232 @@
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
+using Taskloom.Presentation.ViewModels;
 
 namespace Taskloom.Presentation.Views;
 
 public partial class MainWindow : Window
 {
+    private RecordEditorWindow? _editorWindow;
+    private SettingsWindow? _settingsWindow;
+
     public MainWindow()
     {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.OldValue is MainWindowViewModel oldViewModel)
+        {
+            oldViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        if (e.NewValue is MainWindowViewModel newViewModel)
+        {
+            newViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MainWindowViewModel.ActiveEditor))
+        {
+            if (e.PropertyName != nameof(MainWindowViewModel.ActiveSettings))
+            {
+                return;
+            }
+
+            if (DataContext is not MainWindowViewModel settingsViewModel)
+            {
+                return;
+            }
+
+            if (settingsViewModel.ActiveSettings is null)
+            {
+                CloseSettingsWindow();
+                return;
+            }
+
+            OpenSettingsWindow(settingsViewModel.ActiveSettings);
+            return;
+        }
+
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.ActiveEditor is null)
+        {
+            CloseEditorWindow();
+            return;
+        }
+
+        OpenEditorWindow(viewModel.ActiveEditor);
+    }
+
+    private async void RecordsList_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.OpenEditRecordCommand.CanExecute(null))
+        {
+            await viewModel.OpenEditRecordCommand.ExecuteAsync(null);
+        }
+    }
+
+    private async void DeleteRecordButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel || viewModel.SelectedRecord is null)
+        {
+            return;
+        }
+
+        var result = MessageBox.Show(
+            App.CurrentApp.LocalizationService.Format("MainWindow.DeleteConfirmationMessage", viewModel.SelectedRecord.Title),
+            App.CurrentApp.LocalizationService.GetString("MainWindow.DeleteConfirmationTitle"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (viewModel.DeleteRecordCommand.CanExecute(null))
+        {
+            await viewModel.DeleteRecordCommand.ExecuteAsync(null);
+        }
+    }
+
+    private void OpenEditorWindow(RecordEditorViewModel editorViewModel)
+    {
+        if (_editorWindow is not null)
+        {
+            if (_editorWindow.DataContext is RecordEditorViewModel oldEditorViewModel)
+            {
+                oldEditorViewModel.CloseRequested -= OnEditorCloseRequested;
+            }
+
+            _editorWindow.DataContext = editorViewModel;
+            editorViewModel.CloseRequested += OnEditorCloseRequested;
+            _editorWindow.Activate();
+            return;
+        }
+
+        _editorWindow = new RecordEditorWindow
+        {
+            Owner = this,
+            DataContext = editorViewModel
+        };
+
+        editorViewModel.CloseRequested += OnEditorCloseRequested;
+        _editorWindow.Closed += OnEditorWindowClosed;
+        _editorWindow.Show();
+    }
+
+    private void OnEditorCloseRequested(object? sender, RecordEditorCloseRequestedEventArgs e)
+    {
+        CloseEditorWindow();
+    }
+
+    private void OnEditorWindowClosed(object? sender, EventArgs e)
+    {
+        if (_editorWindow?.DataContext is RecordEditorViewModel editorViewModel)
+        {
+            editorViewModel.CloseRequested -= OnEditorCloseRequested;
+        }
+
+        if (DataContext is MainWindowViewModel mainWindowViewModel)
+        {
+            mainWindowViewModel.ActiveEditor = null;
+        }
+
+        if (_editorWindow is not null)
+        {
+            _editorWindow.Closed -= OnEditorWindowClosed;
+        }
+
+        _editorWindow = null;
+    }
+
+    private void CloseEditorWindow()
+    {
+        if (_editorWindow is null)
+        {
+            return;
+        }
+
+        var editorWindow = _editorWindow;
+        _editorWindow = null;
+        editorWindow.Close();
+    }
+
+    private void OpenSettingsWindow(SettingsViewModel settingsViewModel)
+    {
+        if (_settingsWindow is not null)
+        {
+            _settingsWindow.Activate();
+            return;
+        }
+
+        _settingsWindow = new SettingsWindow
+        {
+            Owner = this,
+            DataContext = settingsViewModel
+        };
+
+        settingsViewModel.CloseRequested += OnSettingsCloseRequested;
+        _settingsWindow.Closed += OnSettingsWindowClosed;
+        _settingsWindow.Show();
+    }
+
+    private void OnSettingsCloseRequested(object? sender, SettingsCloseRequestedEventArgs e)
+    {
+        CloseSettingsWindow();
+    }
+
+    private void OnSettingsWindowClosed(object? sender, EventArgs e)
+    {
+        if (_settingsWindow?.DataContext is SettingsViewModel settingsViewModel)
+        {
+            settingsViewModel.CloseRequested -= OnSettingsCloseRequested;
+        }
+
+        if (DataContext is MainWindowViewModel mainWindowViewModel)
+        {
+            mainWindowViewModel.CloseSettings();
+        }
+
+        if (_settingsWindow is not null)
+        {
+            _settingsWindow.Closed -= OnSettingsWindowClosed;
+        }
+
+        _settingsWindow = null;
+    }
+
+    private void CloseSettingsWindow()
+    {
+        if (_settingsWindow is null)
+        {
+            return;
+        }
+
+        var settingsWindow = _settingsWindow;
+        _settingsWindow = null;
+        settingsWindow.Close();
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        CloseEditorWindow();
+        CloseSettingsWindow();
+        base.OnClosing(e);
     }
 }

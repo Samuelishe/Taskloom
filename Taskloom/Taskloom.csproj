@@ -10,6 +10,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="Assets\Localization\**\*.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
         <Content Include="Data\Sql\**\*.sql">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>

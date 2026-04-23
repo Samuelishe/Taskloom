@@ -227,6 +227,38 @@
 - ViewModels должны работать через прикладной слой, а не напрямую через инфраструктуру или XAML-конструкторы.
 - Явная композиция в `App` сильнее шаблонного `StartupUri`, когда приложению уже нужны сервисы и инициализация базы.
 
+## 2026-04-23 - Реализация WPF Views для MVP
+
+### Что сделано
+
+- Переработан `MainWindow.xaml` в полноценный экран с календарём, фильтром, действиями и списком записей.
+- Добавлено отдельное окно `RecordEditorWindow`.
+- В `MainWindow.xaml.cs` реализована тонкая оркестрация открытия и закрытия окна редактора.
+- `RecordEditorViewModel` расширен командами сохранения и отмены, а `MainWindowViewModel` получил связку с редактором.
+- Обновлена документация и точка продолжения работы.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorCloseRequestedEventArgs.cs`
+- `Taskloom/Presentation/ViewModels/RecordTypeFilterOptionViewModel.cs`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/ContinuationGuide.md`
+
+### Обоснование
+
+- Главное окно и отдельный редактор закрывают основной UI-контур MVP.
+- View остаются тонкими: логика открытия окна допустима во View, но логика сохранения и валидации удержана в MVVM и сервисах.
+
 ## 2026-04-23 - Подготовка Git-правил и репозитория
 
 ### Что сделано
@@ -249,3 +281,181 @@
 
 - Проект уже зависит от документации как от части процесса разработки, значит она должна быть обязательной частью коммитов.
 - Нужен предсказуемый git-поток: рабочая ветка `dev`, чистый `.gitignore` и явные правила staged-состава.
+
+## 2026-04-23 - Рефайнмент MVP-сценариев
+
+### Что сделано
+
+- Добавлено подтверждение удаления записи.
+- Добавлено открытие редактора по двойному клику на запись.
+- Устранён хрупкий сценарий с вводом времени: теперь время валидируется при сохранении.
+- Startup приложения переведён на безопасный режим с сообщением об ошибке пользователю.
+- Финальная документация MVP синхронизирована.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/ContinuationGuide.md`
+
+### Обоснование
+
+- Эти правки закрывают реальные слабые места MVP без перестройки архитектуры.
+- После них сценарии `create/edit/delete` стали устойчивее и ближе к рабочему desktop-приложению.
+
+## 2026-04-23 - Планирование локализации и настроек
+
+### Что сделано
+
+- Согласован следующий этап: локализация интерфейса и окно настроек.
+- Зафиксировано требование хранить языки в отдельных файлах.
+- Зафиксировано требование поддержать `ru-RU` и `en-US`.
+- Зафиксировано, что настройки приложения должны храниться отдельно от SQLite.
+- Зафиксировано решение открывать настройки из главного окна по кнопке-шестерёнке.
+- В план добавлено увеличение календаря как ближайший UX-рефайнмент.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/ContinuationGuide.md`
+
+### Обоснование
+
+- Локализацию нужно внедрять сейчас, пока presentation-слой ещё не разросся.
+- Настройки языка и размер календаря лучше зафиксировать заранее как часть согласованного направления развития UI.
+
+## 2026-04-23 - Реализация локализации и настроек
+
+### Что сделано
+
+- Добавлена инфраструктура локализации на основе JSON-файлов `ru-RU` и `en-US`.
+- Добавлен `Loc`-механизм для XAML и сервис локализации для ViewModels и сообщений UI.
+- Добавлен отдельный settings-сервис и `settings.json` вне SQLite.
+- Реализовано окно настроек и кнопка-шестерёнка в главном окне.
+- Текущий UI переведён на локализованные строки.
+- Календарь увеличен как часть UX-рефайнмента главного окна.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Taskloom.csproj`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Assets/README.md`
+- `Taskloom/Common/Markup/LocExtension.cs`
+- `Taskloom/Common/README.md`
+- `Taskloom/Services/Localization/ILocalizationService.cs`
+- `Taskloom/Services/Settings/AppSettings.cs`
+- `Taskloom/Services/Settings/IAppSettingsService.cs`
+- `Taskloom/Services/README.md`
+- `Taskloom/Infrastructure/Localization/LocalizationSource.cs`
+- `Taskloom/Infrastructure/Localization/LocalizationManager.cs`
+- `Taskloom/Infrastructure/Localization/LocalizationService.cs`
+- `Taskloom/Infrastructure/Settings/AppSettingsService.cs`
+- `Taskloom/Infrastructure/Storage/TaskloomPaths.cs`
+- `Taskloom/Infrastructure/README.md`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Presentation/ViewModels/LanguageOptionViewModel.cs`
+- `Taskloom/Presentation/ViewModels/SettingsCloseRequestedEventArgs.cs`
+- `Taskloom/Presentation/ViewModels/SettingsViewModel.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordTypeFilterOptionViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Presentation/Views/SettingsWindow.xaml`
+- `Taskloom/Presentation/Views/SettingsWindow.xaml.cs`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/ContinuationGuide.md`
+
+### Обоснование
+
+- Локализация внедрена до дальнейшего роста UI, поэтому проект не уходит в хаотичный хардкод строк.
+- Настройки языка и локализация встроены в архитектуру как обязательный слой, а не как поздняя надстройка.
+
+## 2026-04-23 - Исправление критических падений локализованного MVP
+
+### Что сделано
+
+- Исправлено падение при открытии окна настроек из-за раннего вызова `SaveCommand.NotifyCanExecuteChanged()`.
+- Исправлено падение при отображении списка записей после создания задачи.
+- Для `CheckBox` в шаблоне списка записей задан `Mode=OneWay`, потому что `RecordListItemViewModel.IsCompleted` является свойством только для чтения.
+- Повторно проверена сборка проекта после исправлений.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/ViewModels/SettingsViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/ContinuationGuide.md`
+
+### Обоснование
+
+- Оба дефекта приводили к аварийному завершению процесса без нормального пользовательского сценария восстановления.
+- Исправление привязки в `MainWindow.xaml` минимально по объёму, соответствует MVVM и устраняет причину, а не симптом.
+
+## 2026-04-23 - UX-рефайнмент списка записей
+
+### Что сделано
+
+- Список записей переработан из однотипной вертикальной ленты в адаптивный карточный layout.
+- Добавлен converter для вычисления ширины карточек по доступной ширине списка и количеству записей.
+- Убрано стандартное синее системное выделение `ListBoxItem`.
+- Добавлены более мягкие состояния hover и selection, согласованные с текущей тёплой темой интерфейса.
+- Карточки теперь перестраиваются при ресайзе окна и лучше используют горизонтальное пространство.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Common/Converters/AdaptiveCardWidthConverter.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/ContinuationGuide.md`
+
+### Обоснование
+
+- Текущий UI плохо использовал ширину окна и визуально опирался на системные стили, которые конфликтовали с общей темой приложения.
+- Карточная адаптивная раскладка даёт более desktop-ориентированное поведение без перестройки домена, сервисов и ViewModels.
+
+## 2026-04-23 - Продолжение UX-рефайнмента главного окна
+
+### Что сделано
+
+- Исправлено растягивание бейджа типа записи на всю ширину карточки.
+- Переработаны верхняя панель главного окна и кнопка настроек.
+- Улучшен блок выбранной даты и статуса.
+- Календарь помещён в более аккуратный контейнер, визуально согласованный с остальными блоками.
+- Кнопки действий переведены на более мягкий единый стиль.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/ContinuationGuide.md`
+
+### Обоснование
+
+- После переделки списка записей остальная часть главного окна выглядела визуально слабее и выбивалась по стилю.
+- Эти правки улучшают цельность интерфейса без создания лишнего слоя темы или переусложнения XAML-инфраструктуры.

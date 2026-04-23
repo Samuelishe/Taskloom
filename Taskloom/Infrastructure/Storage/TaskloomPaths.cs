@@ -18,4 +18,16 @@ public static class TaskloomPaths
 
         return Path.Combine(appDataDirectory, "taskloom.db");
     }
+
+    /// <summary>
+    /// Возвращает путь к файлу настроек приложения.
+    /// </summary>
+    public static string GetSettingsPath()
+    {
+        var appDataDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Taskloom");
+
+        return Path.Combine(appDataDirectory, "settings.json");
+    }
 }
