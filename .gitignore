@@ -1,0 +1,34 @@
+# Build outputs
+[Bb]in/
+[Oo]bj/
+
+# NuGet
+/packages/
+*.nupkg
+*.snupkg
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.rsuser
+
+# Rider / IntelliJ
+.idea/
+*.iml
+riderModule.iml
+
+# ReSharper
+_ReSharper.Caches/
+*.DotSettings.user
+
+# Logs and diagnostics
+*.log
+
+# Local database artifacts
+*.db-shm
+*.db-wal
+
+# OS files
+.DS_Store
+Thumbs.db

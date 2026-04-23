@@ -1,0 +1,32 @@
+using Taskloom.Domain;
+
+namespace Taskloom.Services.Records;
+
+/// <summary>
+/// Описывает прикладные сценарии работы с календарными записями.
+/// </summary>
+public interface ICalendarRecordService
+{
+    /// <summary>
+    /// Возвращает записи выбранной даты с необязательной фильтрацией по типу.
+    /// </summary>
+    Task<IReadOnlyList<CalendarRecord>> GetRecordsByDateAsync(
+        DateOnly date,
+        RecordType? type = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Возвращает черновик записи для редактирования.
+    /// </summary>
+    Task<CalendarRecordDraft?> GetDraftByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Создаёт или обновляет запись по черновику.
+    /// </summary>
+    Task<CalendarRecord> SaveAsync(CalendarRecordDraft draft, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Удаляет запись по идентификатору.
+    /// </summary>
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+}
