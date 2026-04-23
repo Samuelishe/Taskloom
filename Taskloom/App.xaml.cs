@@ -4,11 +4,13 @@ using Taskloom.Infrastructure.Localization;
 using Taskloom.Infrastructure.Repositories;
 using Taskloom.Infrastructure.Settings;
 using Taskloom.Infrastructure.Storage;
+using Taskloom.Infrastructure.Theming;
 using Taskloom.Presentation.ViewModels;
 using Taskloom.Presentation.Views;
 using Taskloom.Services.Localization;
 using Taskloom.Services.Records;
 using Taskloom.Services.Settings;
+using Taskloom.Services.Theming;
 
 namespace Taskloom;
 
@@ -20,6 +22,8 @@ public partial class App : Application
 
     public IAppSettingsService SettingsService { get; private set; } = null!;
 
+    public IThemeService ThemeService { get; private set; } = null!;
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -28,6 +32,9 @@ public partial class App : Application
         {
             SettingsService = new AppSettingsService(TaskloomPaths.GetSettingsPath());
             var settings = await SettingsService.LoadAsync();
+
+            ThemeService = new ThemeService(this);
+            ThemeService.ApplyTheme(settings.ThemeId);
 
             var localizationDirectoryPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Localization");
             var localizationService = new LocalizationService(localizationDirectoryPath);

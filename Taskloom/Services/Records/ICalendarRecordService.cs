@@ -29,4 +29,9 @@ public interface ICalendarRecordService
     /// Удаляет запись по идентификатору.
     /// </summary>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Переключает статус выполнения задачи.
+    /// </summary>
+    Task<TaskRecord> ToggleTaskCompletionAsync(Guid id, CancellationToken cancellationToken = default);
 }

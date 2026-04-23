@@ -24,6 +24,7 @@
   "MainWindow.Status.RecordNotFound": "The record for editing could not be found.",
   "MainWindow.Status.RecordDeleted": "The record has been deleted.",
   "MainWindow.Status.RecordSaved": "Record saved: {0}.",
+  "MainWindow.Status.TaskStatusChanged": "Task status changed: {0}.",
   "MainWindow.Status.EditorClosed": "The record editor has been closed.",
   "MainWindow.Status.SettingsOpened": "Settings window is open.",
   "MainWindow.Status.SettingsClosed": "Settings window is closed.",
@@ -34,6 +35,7 @@
   "Filter.All": "All records",
   "RecordList.TaskCompleted": "Completed",
   "RecordList.TaskPending": "Pending",
+  "RecordList.TaskLabel": "Status",
   "RecordList.NoteAnyTime": "Any time",
   "RecordList.DaySummaryLabel": "Summary",
   "Editor.NewTitle": "New record",
@@ -57,10 +59,13 @@
   "Editor.Validation.EventEndAfterStart": "End time must be later than start time.",
   "Settings.WindowTitle": "Settings",
   "Settings.Header": "Application settings",
-  "Settings.Description": "Only the interface language setting is available for now.",
+  "Settings.Description": "Interface language and color theme settings are available.",
   "Settings.Language": "Interface language",
+  "Settings.Theme": "Color theme",
   "Settings.Cancel": "Close",
   "Settings.Save": "Apply",
   "Settings.OpenButtonHint": "Open settings",
-  "Settings.SaveFailed": "Failed to apply settings.\n\n{0}"
+  "Settings.SaveFailed": "Failed to apply settings.\n\n{0}",
+  "Theme.WarmLight": "Warm light",
+  "Theme.NeutralLight": "Neutral light"
 }

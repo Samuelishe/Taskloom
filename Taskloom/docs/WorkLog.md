@@ -459,3 +459,278 @@
 
 - После переделки списка записей остальная часть главного окна выглядела визуально слабее и выбивалась по стилю.
 - Эти правки улучшают цельность интерфейса без создания лишнего слоя темы или переусложнения XAML-инфраструктуры.
+
+## 2026-04-23 - Корректировка приоритета календаря и ширины одиночных карточек
+
+### Что сделано
+
+- Увеличены размеры и минимальные габариты главного окна.
+- Левой колонке с календарём выделено больше ширины.
+- Масштаб календаря заметно увеличен, чтобы он соответствовал роли главного элемента приложения.
+- В converter ширины карточек добавлено верхнее ограничение, чтобы одиночная запись не растягивалась на всю ширину списка.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Common/Converters/AdaptiveCardWidthConverter.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/ContinuationGuide.md`
+
+### Обоснование
+
+- Для calendar-centered приложения прежний размер календаря был архитектурно слабым и визуально второстепенным.
+- Растягивание одиночной карточки ухудшало композицию списка и делало layout менее стабильным.
+
+## 2026-04-23 - Планирование calendar-first layout и цветовых схем
+
+### Что сделано
+
+- Зафиксировано новое направление развития главного окна: `calendar-first` layout.
+- Зафиксировано требование сделать визуально явное состояние выбранной записи.
+- Согласован отдельный слой тем оформления для основных цветов интерфейса.
+- Выбран подход с использованием `ResourceDictionary` для цветовых схем и хранением активной темы в настройках приложения.
+- Обновлены план разработки, архитектурные правила и точка продолжения.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Без формализации следующего шага UI-решения начали бы развиваться реактивно и фрагментарно.
+- Theme infrastructure и calendar-first компоновка должны быть сначала зафиксированы архитектурно, а уже потом реализованы в коде.
+
+## 2026-04-23 - Реализация calendar-first layout и color themes
+
+### Что сделано
+
+- Перекомпоновано главное окно вокруг календаря: навигация по дню поднята выше, а календарь занимает основное пространство левой колонки.
+- Усилен selected-state карточек записей: добавлена заметная цветовая полоса и более контрастное состояние выбора.
+- Добавлен `ThemeService` и набор стартовых тем на основе `ResourceDictionary`.
+- Настройки приложения расширены полем `ThemeId`.
+- В окно настроек добавлен выбор цветовой схемы.
+- Основные цвета `MainWindow`, `SettingsWindow` и `RecordEditorWindow` переведены на `DynamicResource`.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/App.xaml`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Assets/Themes/WarmLightTheme.xaml`
+- `Taskloom/Assets/Themes/NeutralLightTheme.xaml`
+- `Taskloom/Infrastructure/Theming/ThemeIds.cs`
+- `Taskloom/Infrastructure/Theming/ThemeService.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/SettingsViewModel.cs`
+- `Taskloom/Presentation/ViewModels/ThemeOptionViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/SettingsWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Services/Settings/AppSettings.cs`
+- `Taskloom/Services/Theming/IThemeService.cs`
+- `Taskloom/Services/Theming/ThemeDefinition.cs`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Без theme layer дальнейший UI-рефайнмент снова начал бы множить локальные цвета и стили.
+- Calendar-first компоновка и тема оформления должны были войти в проект как связанное архитектурное изменение, а не как набор разрозненных косметических патчей.
+
+## 2026-04-23 - Удаление псевдо-интерактивных галочек из карточек задач
+
+### Что сделано
+
+- Из карточек задач удалён `CheckBox`, который визуально выглядел как интерактивный, но по факту был только read-only индикатором.
+- Сохранён единый источник отображения состояния задачи через текстовый статус в карточке.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Псевдо-интерактивный элемент вводил в заблуждение: пользователь ожидал переключения прямо из списка, которого в текущем UX нет.
+- Для текущей модели редактирования честнее показывать состояние задачи как индикатор, а не как недоступный элемент управления.
+
+## 2026-04-23 - Планирование quick toggle статуса задач
+
+### Что сделано
+
+- Зафиксировано решение заменить пассивный индикатор статуса задачи на интерактивный status chip.
+- Зафиксировано требование перевести бейджи карточек на прямоугольную форму с умеренным скруглением.
+- Зафиксировано требование использовать семантические success/danger цвета через темы.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Быстрый toggle статуса задачи логически относится к списку и должен быть оформлен как явный action-state элемент.
+- Семантические цвета статусов должны зависеть от темы, а не быть захардкожены в карточке.
+
+## 2026-04-23 - Реализация quick toggle статуса задач и status chips
+
+### Что сделано
+
+- В прикладной сервис добавлен сценарий быстрого переключения статуса задачи.
+- В `MainWindowViewModel` добавлена команда переключения статуса задачи прямо из карточки списка.
+- Для карточек задач добавлен интерактивный status chip с иконкой и текстом.
+- Бейджи карточек переведены на прямоугольную форму с умеренным скруглением.
+- В темы добавлены семантические success/danger ресурсы для статусных элементов.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Services/Records/ICalendarRecordService.cs`
+- `Taskloom/Services/Records/CalendarRecordService.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Assets/Themes/WarmLightTheme.xaml`
+- `Taskloom/Assets/Themes/NeutralLightTheme.xaml`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Для задач быстрый toggle в списке полезнее, чем обязательный заход в окно редактора.
+- Интерактивный status chip честнее и понятнее, чем декоративный индикатор, внешне похожий на control.
+
+## 2026-04-23 - Планирование visual refinement chips и semantic palettes
+
+### Что сделано
+
+- Зафиксировано требование согласовать success/danger палитры с каждой темой, а не использовать механические красный и зелёный.
+- Зафиксировано требование вынести общий стиль chips в общие ресурсы приложения.
+- Зафиксировано решение ослабить лишние акценты карточек, чтобы status chip не конфликтовал с остальной композицией.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- На текущем этапе проблема уже не в архитектуре сценария, а в несогласованном visual language chips и карточек.
+- Централизация geometry и palettes в ресурсах темы сильнее, чем точечные правки отдельных цветов в XAML.
+
+## 2026-04-23 - Реализация visual refinement chips и semantic palettes
+
+### Что сделано
+
+- В `App.xaml` добавлены общие стили для нейтральных chips, текста chips и status chips.
+- Для обеих тем пересобраны semantic palettes success/danger в более спокойных и согласованных оттенках.
+- Type, info и status chips приведены к общей геометрии.
+- Ослаблены лишние акценты карточек: убран постоянный цветовой контур по типу записи и уменьшена ширина selection stripe.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/App.xaml`
+- `Taskloom/Assets/Themes/WarmLightTheme.xaml`
+- `Taskloom/Assets/Themes/NeutralLightTheme.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Визуальная система chips должна задаваться централизованно, иначе любая следующая правка статусов или бейджей снова ломает согласованность интерфейса.
+- Более спокойные semantic palettes лучше сочетаются с карточками и не выбиваются из характера выбранной темы.
+
+## 2026-04-23 - Custom title bar главного окна
+
+### Что сделано
+
+- Убрана стандартная системная шапка `MainWindow`.
+- Добавлена кастомная title bar область в стиле текущей темы.
+- Добавлены кнопки свернуть, развернуть/восстановить и закрыть.
+- Добавлена возможность перетаскивать окно за кастомную шапку.
+- Добавлен double click по шапке для maximize/restore.
+- Для сохранения resize и desktop-поведения используется `WindowChrome`.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/App.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Стандартный title bar визуально выбивался из приложения.
+- `WindowChrome` даёт нужную кастомизацию без отказа от нормального resize/snap поведения Windows.
+
+## 2026-04-23 - Упрощение левой панели после добавления custom title bar
+
+### Что сделано
+
+- Убран дублирующий брендовый блок `Taskloom` и описание из левой панели.
+- Кастомная шапка усилена типографически и стала основным местом бренда и текущей даты.
+- В левой панели оставлен рабочий блок выбранной даты, потому что он связан с навигацией по дню и статусом записей.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/Architecture.md`
+
+### Обоснование
+
+- После появления кастомной шапки бренд и описание в левой панели стали визуальным дублем.
+- Дата в шапке и дата в рабочем блоке выполняют разные роли: глобальный контекст окна и управление выбранным днём.
+
+## 2026-04-23 - Доводка расположения настроек и календарной области
+
+### Что сделано
+
+- Кнопка настроек перенесена из левой панели в кастомную шапку рядом с оконными кнопками.
+- Убран лишний бейдж `Выбранная дата` из левой панели.
+- Уменьшены отступы календарного контейнера, чтобы он не выглядел чрезмерно широким вокруг самого календаря.
+- Убран пустой верхний ряд в левой панели после переноса настроек.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/WorkLog.md`
+- `Taskloom/docs/Architecture.md`
+
+### Обоснование
+
+- Настройки относятся к окну приложения в целом, поэтому в кастомной шапке они логичнее, чем рядом с выбранной датой.
+- Бейдж выбранной даты был лишним после усиления даты в шапке и рабочем блоке.
+- Календарный контейнер должен помогать календарю, а не создавать лишнюю пустую рамку вокруг него.

@@ -34,6 +34,7 @@ public partial class MainWindowViewModel : ObservableObject
         OpenCreateRecordCommand = new RelayCommand(OpenCreateRecord);
         OpenEditRecordCommand = new AsyncRelayCommand(OpenEditRecordAsync, CanOpenEditRecord);
         DeleteRecordCommand = new AsyncRelayCommand(DeleteSelectedRecordAsync, CanDeleteSelectedRecord);
+        ToggleTaskCompletionCommand = new AsyncRelayCommand<RecordListItemViewModel?>(ToggleTaskCompletionAsync, CanToggleTaskCompletion);
         PreviousDayCommand = new RelayCommand(MoveToPreviousDay);
         NextDayCommand = new RelayCommand(MoveToNextDay);
         RefreshCommand = new AsyncRelayCommand(LoadRecordsAsync);
@@ -61,6 +62,8 @@ public partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand OpenEditRecordCommand { get; }
 
     public IAsyncRelayCommand DeleteRecordCommand { get; }
+
+    public IAsyncRelayCommand<RecordListItemViewModel?> ToggleTaskCompletionCommand { get; }
 
     public IRelayCommand PreviousDayCommand { get; }
 
@@ -131,12 +134,14 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OpenEditRecordCommand.NotifyCanExecuteChanged();
         DeleteRecordCommand.NotifyCanExecuteChanged();
+        ToggleTaskCompletionCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnIsBusyChanged(bool value)
     {
         OpenEditRecordCommand.NotifyCanExecuteChanged();
         DeleteRecordCommand.NotifyCanExecuteChanged();
+        ToggleTaskCompletionCommand.NotifyCanExecuteChanged();
     }
 
     private async Task LoadRecordsAsync(CancellationToken cancellationToken = default)
@@ -232,6 +237,25 @@ public partial class MainWindowViewModel : ObservableObject
         return SelectedRecord is not null && !IsBusy;
     }
 
+    private async Task ToggleTaskCompletionAsync(RecordListItemViewModel? item, CancellationToken cancellationToken)
+    {
+        if (item is null || !item.IsTask)
+        {
+            return;
+        }
+
+        var updatedTask = await _recordService.ToggleTaskCompletionAsync(item.Id, cancellationToken);
+        StatusText = _localizationService.Format("MainWindow.Status.TaskStatusChanged", updatedTask.Title);
+
+        await LoadRecordsAsync(cancellationToken);
+        SelectedRecord = Records.FirstOrDefault(record => record.Id == updatedTask.Id);
+    }
+
+    private bool CanToggleTaskCompletion(RecordListItemViewModel? item)
+    {
+        return item is { IsTask: true } && !IsBusy;
+    }
+
     private void MoveToPreviousDay()
     {
         SelectedDate = SelectedDate.AddDays(-1);
@@ -275,7 +299,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OpenSettings()
     {
-        ActiveSettings = new SettingsViewModel(_localizationService, _settingsService);
+        ActiveSettings = new SettingsViewModel(_localizationService, _settingsService, App.CurrentApp.ThemeService);
         StatusText = _localizationService.GetString("MainWindow.Status.SettingsOpened");
     }
 

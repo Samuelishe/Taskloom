@@ -47,6 +47,34 @@ public sealed class CalendarRecordService : ICalendarRecordService
         return _repository.DeleteAsync(id, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<TaskRecord> ToggleTaskCompletionAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var record = await _repository.GetByIdAsync(id, cancellationToken);
+
+        if (record is null)
+        {
+            throw new InvalidOperationException("Не удалось найти задачу для изменения статуса.");
+        }
+
+        if (record is not TaskRecord taskRecord)
+        {
+            throw new InvalidOperationException("Быстрое изменение статуса доступно только для задач.");
+        }
+
+        if (taskRecord.IsCompleted)
+        {
+            taskRecord.MarkPending();
+        }
+        else
+        {
+            taskRecord.MarkCompleted();
+        }
+
+        await _repository.SaveAsync(taskRecord, cancellationToken);
+        return taskRecord;
+    }
+
     private static CalendarRecord CreateRecord(CalendarRecordDraft draft)
     {
         var id = draft.Id ?? Guid.NewGuid();

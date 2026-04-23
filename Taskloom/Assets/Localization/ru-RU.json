@@ -24,6 +24,7 @@
   "MainWindow.Status.RecordNotFound": "Не удалось найти запись для редактирования.",
   "MainWindow.Status.RecordDeleted": "Запись удалена.",
   "MainWindow.Status.RecordSaved": "Запись сохранена: {0}.",
+  "MainWindow.Status.TaskStatusChanged": "Статус задачи изменён: {0}.",
   "MainWindow.Status.EditorClosed": "Редактор записи закрыт.",
   "MainWindow.Status.SettingsOpened": "Окно настроек открыто.",
   "MainWindow.Status.SettingsClosed": "Окно настроек закрыто.",
@@ -34,6 +35,7 @@
   "Filter.All": "Все записи",
   "RecordList.TaskCompleted": "Выполнено",
   "RecordList.TaskPending": "Не выполнено",
+  "RecordList.TaskLabel": "Статус",
   "RecordList.NoteAnyTime": "В любое время",
   "RecordList.DaySummaryLabel": "Итог",
   "Editor.NewTitle": "Новая запись",
@@ -57,10 +59,13 @@
   "Editor.Validation.EventEndAfterStart": "Время окончания должно быть позже времени начала.",
   "Settings.WindowTitle": "Настройки",
   "Settings.Header": "Настройки приложения",
-  "Settings.Description": "Пока доступна только настройка языка интерфейса.",
+  "Settings.Description": "Доступны настройки языка интерфейса и цветовой схемы.",
   "Settings.Language": "Язык интерфейса",
+  "Settings.Theme": "Цветовая схема",
   "Settings.Cancel": "Закрыть",
   "Settings.Save": "Применить",
   "Settings.OpenButtonHint": "Открыть настройки",
-  "Settings.SaveFailed": "Не удалось применить настройки.\n\n{0}"
+  "Settings.SaveFailed": "Не удалось применить настройки.\n\n{0}",
+  "Theme.WarmLight": "Тёплая светлая",
+  "Theme.NeutralLight": "Нейтральная светлая"
 }

@@ -15,7 +15,9 @@ public sealed class RecordListItemViewModel
         string title,
         string? details,
         string timeDisplay,
-        bool isCompleted)
+        bool isCompleted,
+        string? taskStatusText = null,
+        string? taskStatusIcon = null)
     {
         Id = id;
         Type = type;
@@ -24,6 +26,8 @@ public sealed class RecordListItemViewModel
         Details = details;
         TimeDisplay = timeDisplay;
         IsCompleted = isCompleted;
+        TaskStatusText = taskStatusText;
+        TaskStatusIcon = taskStatusIcon;
     }
 
     public Guid Id { get; }
@@ -42,6 +46,10 @@ public sealed class RecordListItemViewModel
 
     public bool IsTask => Type == RecordType.Task;
 
+    public string? TaskStatusText { get; }
+
+    public string? TaskStatusIcon { get; }
+
     /// <summary>
     /// Создаёт presentation-модель элемента списка из доменной записи.
     /// </summary>
@@ -58,10 +66,12 @@ public sealed class RecordListItemViewModel
                 localizationService.GetString("RecordType.Task"),
                 taskRecord.Title,
                 taskRecord.Details,
+                localizationService.GetString("RecordList.TaskLabel"),
+                taskRecord.IsCompleted,
                 taskRecord.IsCompleted
                     ? localizationService.GetString("RecordList.TaskCompleted")
                     : localizationService.GetString("RecordList.TaskPending"),
-                taskRecord.IsCompleted),
+                taskRecord.IsCompleted ? "✓" : "✕"),
 
             NoteRecord noteRecord => new RecordListItemViewModel(
                 noteRecord.Id,
