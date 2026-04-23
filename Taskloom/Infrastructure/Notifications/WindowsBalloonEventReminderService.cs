@@ -6,7 +6,7 @@ using Taskloom.Services.Records;
 namespace Taskloom.Infrastructure.Notifications;
 
 /// <summary>
-/// Показывает Windows-напоминания о событиях через системный tray balloon.
+/// Показывает Windows-напоминания о календарных записях через выбранный транспорт уведомлений.
 /// </summary>
 public sealed class WindowsBalloonEventReminderService : IEventReminderService
 {
@@ -79,12 +79,18 @@ public sealed class WindowsBalloonEventReminderService : IEventReminderService
         for (var dayOffset = 0; dayOffset <= 1; dayOffset++)
         {
             var date = DateOnly.FromDateTime(now.Date.AddDays(dayOffset));
-            var records = await _recordService.GetRecordsByDateAsync(date, RecordType.Event);
+            var eventRecords = await _recordService.GetRecordsByDateAsync(date, RecordType.Event);
+            var taskRecords = await _recordService.GetRecordsByDateAsync(date, RecordType.Task);
 
-            foreach (var eventRecord in records.OfType<EventRecord>())
+            foreach (var eventRecord in eventRecords.OfType<EventRecord>())
             {
                 TryShowReminderNotification(eventRecord, now);
                 TryShowStartedNotification(eventRecord, now);
+            }
+
+            foreach (var taskRecord in taskRecords.OfType<TaskRecord>())
+            {
+                TryShowTaskReminderNotification(taskRecord, now);
             }
         }
     }
@@ -146,6 +152,36 @@ public sealed class WindowsBalloonEventReminderService : IEventReminderService
             "Notification.EventStartedMessage",
             eventRecord.Title,
             eventStart.ToString("HH:mm"));
+
+        _notificationService.ShowInfo(title, message);
+    }
+
+    private void TryShowTaskReminderNotification(TaskRecord taskRecord, DateTime now)
+    {
+        if (taskRecord.IsCompleted || taskRecord.ReminderTime is null)
+        {
+            return;
+        }
+
+        var reminderTime = taskRecord.Date.ToDateTime(taskRecord.ReminderTime.Value);
+
+        if (!IsWithinNotificationWindow(now, reminderTime))
+        {
+            return;
+        }
+
+        var reminderKey = $"task:{taskRecord.Id:D}:{reminderTime:O}";
+
+        if (!_shownNotificationKeys.Add(reminderKey))
+        {
+            return;
+        }
+
+        var title = _localizationService.GetString("Notification.TaskReminderTitle");
+        var message = _localizationService.Format(
+            "Notification.TaskReminderMessage",
+            taskRecord.Title,
+            reminderTime.ToString("HH:mm"));
 
         _notificationService.ShowInfo(title, message);
     }

@@ -10,13 +10,17 @@ public sealed class TaskRecord : CalendarRecord
         DateOnly date,
         string title,
         string? details,
-        bool isCompleted = false)
+        bool isCompleted = false,
+        TimeOnly? reminderTime = null)
         : base(id, RecordType.Task, date, title, details)
     {
         IsCompleted = isCompleted;
+        ReminderTime = reminderTime;
     }
 
     public bool IsCompleted { get; private set; }
+
+    public TimeOnly? ReminderTime { get; private set; }
 
     public void MarkCompleted()
     {
@@ -26,5 +30,15 @@ public sealed class TaskRecord : CalendarRecord
     public void MarkPending()
     {
         IsCompleted = false;
+    }
+
+    public void SetReminderTime(TimeOnly reminderTime)
+    {
+        ReminderTime = reminderTime;
+    }
+
+    public void ClearReminder()
+    {
+        ReminderTime = null;
     }
 }

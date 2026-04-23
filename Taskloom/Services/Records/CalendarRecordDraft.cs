@@ -33,9 +33,24 @@ public sealed class CalendarRecordDraft
     public string? Details { get; set; }
 
     /// <summary>
+    /// Изображения записи.
+    /// </summary>
+    public List<RecordImageDraft> Images { get; set; } = [];
+
+    /// <summary>
+    /// Аудиофайлы записи.
+    /// </summary>
+    public List<RecordAudioDraft> Audios { get; set; } = [];
+
+    /// <summary>
     /// Признак завершения задачи.
     /// </summary>
     public bool IsCompleted { get; set; }
+
+    /// <summary>
+    /// Время напоминания о задаче.
+    /// </summary>
+    public TimeOnly? TaskReminderTime { get; set; }
 
     /// <summary>
     /// Время начала события.

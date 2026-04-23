@@ -1,7 +1,9 @@
-using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
+using System.IO;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Taskloom.Domain;
+using Taskloom.Infrastructure.Storage;
 using Taskloom.Services.Localization;
 using Taskloom.Services.Records;
 
@@ -15,16 +17,22 @@ public partial class RecordEditorViewModel : ObservableObject
     private readonly Func<RecordEditorViewModel, CancellationToken, Task> _saveAsync;
     private readonly Action _cancel;
     private readonly ILocalizationService _localizationService;
+    private readonly IRecordImageStorageService _imageStorageService;
+    private readonly IRecordAudioStorageService _audioStorageService;
     private bool _isTimePartSyncing;
 
     private RecordEditorViewModel(
         Func<RecordEditorViewModel, CancellationToken, Task> saveAsync,
         Action cancel,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        IRecordImageStorageService imageStorageService,
+        IRecordAudioStorageService audioStorageService)
     {
         _saveAsync = saveAsync ?? throw new ArgumentNullException(nameof(saveAsync));
         _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
         _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+        _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
+        _audioStorageService = audioStorageService ?? throw new ArgumentNullException(nameof(audioStorageService));
 
         SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
         CancelCommand = new RelayCommand(Cancel);
@@ -35,6 +43,8 @@ public partial class RecordEditorViewModel : ObservableObject
             new(_localizationService, "RecordType.Event", RecordType.Event),
             new(_localizationService, "RecordType.DaySummary", RecordType.DaySummary)
         };
+        Images = new ObservableCollection<RecordImageDraft>();
+        Audios = new ObservableCollection<RecordAudioDraft>();
         HourOptions = CreateTimePartOptions(0, 23);
         MinuteSecondOptions = CreateTimePartOptions(0, 59);
         EventStatusOptions = CreateEventStatusOptions(_localizationService);
@@ -60,6 +70,18 @@ public partial class RecordEditorViewModel : ObservableObject
 
     [ObservableProperty]
     private bool isCompleted;
+
+    [ObservableProperty]
+    private TimeOnly? taskReminderTime;
+
+    [ObservableProperty]
+    private bool hasTaskReminder;
+
+    [ObservableProperty]
+    private int selectedTaskReminderHour = 9;
+
+    [ObservableProperty]
+    private int selectedTaskReminderMinute;
 
     [ObservableProperty]
     private TimeOnly? startTime;
@@ -111,6 +133,10 @@ public partial class RecordEditorViewModel : ObservableObject
 
     public bool IsDaySummary => Type == RecordType.DaySummary;
 
+    public bool HasImages => Images.Count > 0;
+
+    public bool HasAudios => Audios.Count > 0;
+
     public DateTime DateValue
     {
         get => Date.ToDateTime(TimeOnly.MinValue);
@@ -123,6 +149,10 @@ public partial class RecordEditorViewModel : ObservableObject
 
     public ObservableCollection<RecordTypeFilterOptionViewModel> RecordTypeOptions { get; }
 
+    public ObservableCollection<RecordImageDraft> Images { get; }
+
+    public ObservableCollection<RecordAudioDraft> Audios { get; }
+
     public IReadOnlyList<TimePartOptionViewModel> HourOptions { get; }
 
     public IReadOnlyList<TimePartOptionViewModel> MinuteSecondOptions { get; }
@@ -133,16 +163,15 @@ public partial class RecordEditorViewModel : ObservableObject
 
     public event EventHandler<RecordEditorCloseRequestedEventArgs>? CloseRequested;
 
-    /// <summary>
-    /// Создаёт новый черновик записи для выбранной даты.
-    /// </summary>
     public static RecordEditorViewModel CreateNew(
         DateOnly date,
         Func<RecordEditorViewModel, CancellationToken, Task> saveAsync,
         Action cancel,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        IRecordImageStorageService imageStorageService,
+        IRecordAudioStorageService audioStorageService)
     {
-        return new RecordEditorViewModel(saveAsync, cancel, localizationService)
+        return new RecordEditorViewModel(saveAsync, cancel, localizationService, imageStorageService, audioStorageService)
         {
             Type = RecordType.Task,
             Date = date,
@@ -150,18 +179,17 @@ public partial class RecordEditorViewModel : ObservableObject
         };
     }
 
-    /// <summary>
-    /// Создаёт ViewModel редактора из существующего черновика.
-    /// </summary>
     public static RecordEditorViewModel FromDraft(
         CalendarRecordDraft draft,
         Func<RecordEditorViewModel, CancellationToken, Task> saveAsync,
         Action cancel,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        IRecordImageStorageService imageStorageService,
+        IRecordAudioStorageService audioStorageService)
     {
         ArgumentNullException.ThrowIfNull(draft);
 
-        return new RecordEditorViewModel(saveAsync, cancel, localizationService)
+        var viewModel = new RecordEditorViewModel(saveAsync, cancel, localizationService, imageStorageService, audioStorageService)
         {
             Id = draft.Id,
             Type = draft.Type,
@@ -169,6 +197,8 @@ public partial class RecordEditorViewModel : ObservableObject
             Title = draft.Title,
             Details = draft.Details,
             IsCompleted = draft.IsCompleted,
+            TaskReminderTime = draft.TaskReminderTime,
+            HasTaskReminder = draft.TaskReminderTime is not null,
             StartTime = draft.StartTime,
             EndTime = draft.EndTime,
             Location = draft.Location,
@@ -176,13 +206,17 @@ public partial class RecordEditorViewModel : ObservableObject
             ReminderMinutesBefore = draft.ReminderMinutesBefore,
             EditorTitle = localizationService.GetString("Editor.EditTitle")
         };
+
+        viewModel.LoadImages(draft.Images);
+        viewModel.LoadAudios(draft.Audios);
+        return viewModel;
     }
 
-    /// <summary>
-    /// Возвращает черновик для сохранения.
-    /// </summary>
     public CalendarRecordDraft ToDraft()
     {
+        NormalizeImageSortOrder();
+        NormalizeAudioSortOrder();
+
         return new CalendarRecordDraft
         {
             Id = Id,
@@ -190,7 +224,10 @@ public partial class RecordEditorViewModel : ObservableObject
             Date = Date,
             Title = Title,
             Details = Details,
+            Images = Images.Select(CloneImageDraft).ToList(),
+            Audios = Audios.Select(CloneAudioDraft).ToList(),
             IsCompleted = IsCompleted,
+            TaskReminderTime = TaskReminderTime,
             StartTime = StartTime,
             EndTime = EndTime,
             Location = Location,
@@ -210,6 +247,8 @@ public partial class RecordEditorViewModel : ObservableObject
         if (value != RecordType.Task)
         {
             IsCompleted = false;
+            HasTaskReminder = false;
+            TaskReminderTime = null;
         }
 
         if (value != RecordType.Event)
@@ -247,6 +286,34 @@ public partial class RecordEditorViewModel : ObservableObject
         ApplyStartTimeToParts(value);
     }
 
+    partial void OnTaskReminderTimeChanged(TimeOnly? value)
+    {
+        ApplyTaskReminderTimeToParts(value);
+
+        if (_isTimePartSyncing)
+        {
+            return;
+        }
+
+        HasTaskReminder = value is not null;
+    }
+
+    partial void OnHasTaskReminderChanged(bool value)
+    {
+        if (!IsTask)
+        {
+            return;
+        }
+
+        if (value)
+        {
+            TaskReminderTime ??= new TimeOnly(9, 0);
+            return;
+        }
+
+        TaskReminderTime = null;
+    }
+
     partial void OnEndTimeChanged(TimeOnly? value)
     {
         ValidationMessage = null;
@@ -256,6 +323,16 @@ public partial class RecordEditorViewModel : ObservableObject
     partial void OnSelectedStartHourChanged(int value)
     {
         UpdateStartTimeFromParts();
+    }
+
+    partial void OnSelectedTaskReminderHourChanged(int value)
+    {
+        UpdateTaskReminderTimeFromParts();
+    }
+
+    partial void OnSelectedTaskReminderMinuteChanged(int value)
+    {
+        UpdateTaskReminderTimeFromParts();
     }
 
     partial void OnSelectedStartMinuteChanged(int value)
@@ -306,6 +383,10 @@ public partial class RecordEditorViewModel : ObservableObject
         }
         catch (Exception exception)
         {
+            TaskloomDiagnosticLog.AppendException(
+                TaskloomPaths.GetRecordSaveLogPath(),
+                exception,
+                $"Record save failed. RecordId={Id?.ToString() ?? "new"}, Title='{Title}', Type={Type}");
             ValidationMessage = exception.Message;
         }
         finally
@@ -323,6 +404,149 @@ public partial class RecordEditorViewModel : ObservableObject
     {
         _cancel();
         CloseRequested?.Invoke(this, new RecordEditorCloseRequestedEventArgs(false));
+    }
+
+    public void AttachImagesFromFiles(IEnumerable<string> filePaths)
+    {
+        foreach (var filePath in filePaths.Where(static path => !string.IsNullOrWhiteSpace(path)))
+        {
+            Images.Add(new RecordImageDraft
+            {
+                OriginalFileName = Path.GetFileName(filePath),
+                SourceFilePath = filePath,
+                PreviewPath = filePath,
+                SortOrder = Images.Count
+            });
+        }
+
+        NormalizeImageSortOrder();
+        OnPropertyChanged(nameof(HasImages));
+    }
+
+    public async Task AttachAudiosFromFilesAsync(IEnumerable<string> filePaths, CancellationToken cancellationToken = default)
+    {
+        foreach (var filePath in filePaths.Where(static path => !string.IsNullOrWhiteSpace(path)))
+        {
+            var draft = await _audioStorageService.PrepareAudioDraftAsync(filePath, Audios.Count, cancellationToken);
+            Audios.Add(draft);
+        }
+
+        NormalizeAudioSortOrder();
+        OnPropertyChanged(nameof(HasAudios));
+    }
+
+    public void RemoveImage(RecordImageDraft? image)
+    {
+        if (image is null)
+        {
+            return;
+        }
+
+        Images.Remove(image);
+        NormalizeImageSortOrder();
+        OnPropertyChanged(nameof(HasImages));
+    }
+
+    public void RemoveAudio(RecordAudioDraft? audio)
+    {
+        if (audio is null)
+        {
+            return;
+        }
+
+        Audios.Remove(audio);
+        NormalizeAudioSortOrder();
+        OnPropertyChanged(nameof(HasAudios));
+    }
+
+    public void MoveImageLeft(RecordImageDraft? image)
+    {
+        MoveImage(image, -1);
+    }
+
+    public void MoveImageRight(RecordImageDraft? image)
+    {
+        MoveImage(image, 1);
+    }
+
+    public void MoveAudioLeft(RecordAudioDraft? audio)
+    {
+        MoveAudio(audio, -1);
+    }
+
+    public void MoveAudioRight(RecordAudioDraft? audio)
+    {
+        MoveAudio(audio, 1);
+    }
+
+    public bool CanMoveImageLeft(RecordImageDraft? image)
+    {
+        return image is not null && Images.IndexOf(image) > 0;
+    }
+
+    public bool CanMoveImageRight(RecordImageDraft? image)
+    {
+        return image is not null && Images.IndexOf(image) >= 0 && Images.IndexOf(image) < Images.Count - 1;
+    }
+
+    public bool CanMoveAudioLeft(RecordAudioDraft? audio)
+    {
+        return audio is not null && Audios.IndexOf(audio) > 0;
+    }
+
+    public bool CanMoveAudioRight(RecordAudioDraft? audio)
+    {
+        return audio is not null && Audios.IndexOf(audio) >= 0 && Audios.IndexOf(audio) < Audios.Count - 1;
+    }
+
+    private void MoveImage(RecordImageDraft? image, int delta)
+    {
+        if (image is null)
+        {
+            return;
+        }
+
+        var oldIndex = Images.IndexOf(image);
+
+        if (oldIndex < 0)
+        {
+            return;
+        }
+
+        var newIndex = oldIndex + delta;
+
+        if (newIndex < 0 || newIndex >= Images.Count)
+        {
+            return;
+        }
+
+        Images.Move(oldIndex, newIndex);
+        NormalizeImageSortOrder();
+    }
+
+    private void MoveAudio(RecordAudioDraft? audio, int delta)
+    {
+        if (audio is null)
+        {
+            return;
+        }
+
+        var oldIndex = Audios.IndexOf(audio);
+
+        if (oldIndex < 0)
+        {
+            return;
+        }
+
+        var newIndex = oldIndex + delta;
+
+        if (newIndex < 0 || newIndex >= Audios.Count)
+        {
+            return;
+        }
+
+        Audios.Move(oldIndex, newIndex);
+        NormalizeAudioSortOrder();
     }
 
     private string? Validate()
@@ -378,6 +602,26 @@ public partial class RecordEditorViewModel : ObservableObject
         }
     }
 
+    private void ApplyTaskReminderTimeToParts(TimeOnly? value)
+    {
+        if (value is null || _isTimePartSyncing)
+        {
+            return;
+        }
+
+        _isTimePartSyncing = true;
+
+        try
+        {
+            SelectedTaskReminderHour = value.Value.Hour;
+            SelectedTaskReminderMinute = value.Value.Minute;
+        }
+        finally
+        {
+            _isTimePartSyncing = false;
+        }
+    }
+
     private void ApplyEndTimeToParts(TimeOnly? value)
     {
         if (value is null || _isTimePartSyncing)
@@ -409,6 +653,16 @@ public partial class RecordEditorViewModel : ObservableObject
         StartTime = new TimeOnly(SelectedStartHour, SelectedStartMinute, SelectedStartSecond);
     }
 
+    private void UpdateTaskReminderTimeFromParts()
+    {
+        if (_isTimePartSyncing || !IsTask || !HasTaskReminder)
+        {
+            return;
+        }
+
+        TaskReminderTime = new TimeOnly(SelectedTaskReminderHour, SelectedTaskReminderMinute);
+    }
+
     private void UpdateEndTimeFromParts()
     {
         if (_isTimePartSyncing || !IsEvent)
@@ -417,6 +671,132 @@ public partial class RecordEditorViewModel : ObservableObject
         }
 
         EndTime = new TimeOnly(SelectedEndHour, SelectedEndMinute, SelectedEndSecond);
+    }
+
+    private void LoadImages(IEnumerable<RecordImageDraft> images)
+    {
+        Images.Clear();
+
+        foreach (var image in images.OrderBy(static image => image.SortOrder))
+        {
+            Images.Add(new RecordImageDraft
+            {
+                Id = image.Id,
+                OriginalFileName = image.OriginalFileName,
+                StoredFileName = image.StoredFileName,
+                RelativePath = image.RelativePath,
+                ContentType = image.ContentType,
+                FileSize = image.FileSize,
+                CreatedUtc = image.CreatedUtc,
+                SortOrder = image.SortOrder,
+                SourceFilePath = image.SourceFilePath,
+                PreviewPath = image.IsPendingImport
+                    ? image.SourceFilePath
+                    : _imageStorageService.GetAbsolutePath(image.RelativePath)
+            });
+        }
+
+        NormalizeImageSortOrder();
+        OnPropertyChanged(nameof(HasImages));
+    }
+
+    private void LoadAudios(IEnumerable<RecordAudioDraft> audios)
+    {
+        Audios.Clear();
+
+        foreach (var audio in audios.OrderBy(static audio => audio.SortOrder))
+        {
+            Audios.Add(new RecordAudioDraft
+            {
+                Id = audio.Id,
+                OriginalFileName = audio.OriginalFileName,
+                StoredFileName = audio.StoredFileName,
+                RelativePath = audio.RelativePath,
+                ContentType = audio.ContentType,
+                FileSize = audio.FileSize,
+                CreatedUtc = audio.CreatedUtc,
+                SortOrder = audio.SortOrder,
+                SourceFilePath = audio.SourceFilePath,
+                DisplayTitle = audio.DisplayTitle,
+                DurationSeconds = audio.DurationSeconds,
+                CoverRelativePath = audio.CoverRelativePath,
+                CoverPreviewPath = audio.IsPendingImport
+                    ? audio.CoverPreviewPath
+                    : _audioStorageService.GetAbsolutePath(audio.CoverRelativePath),
+                CoverBytes = audio.CoverBytes
+            });
+        }
+
+        NormalizeAudioSortOrder();
+        OnPropertyChanged(nameof(HasAudios));
+    }
+
+    private void NormalizeImageSortOrder()
+    {
+        for (var index = 0; index < Images.Count; index++)
+        {
+            Images[index].SortOrder = index;
+
+            if (Images[index].PreviewPath is null)
+            {
+                Images[index].PreviewPath = Images[index].IsPendingImport
+                    ? Images[index].SourceFilePath
+                    : _imageStorageService.GetAbsolutePath(Images[index].RelativePath);
+            }
+        }
+    }
+
+    private void NormalizeAudioSortOrder()
+    {
+        for (var index = 0; index < Audios.Count; index++)
+        {
+            Audios[index].SortOrder = index;
+
+            if (Audios[index].CoverPreviewPath is null && !string.IsNullOrWhiteSpace(Audios[index].CoverRelativePath))
+            {
+                Audios[index].CoverPreviewPath = Audios[index].IsPendingImport
+                    ? Audios[index].CoverPreviewPath
+                    : _audioStorageService.GetAbsolutePath(Audios[index].CoverRelativePath);
+            }
+        }
+    }
+
+    private static RecordImageDraft CloneImageDraft(RecordImageDraft image)
+    {
+        return new RecordImageDraft
+        {
+            Id = image.Id,
+            OriginalFileName = image.OriginalFileName,
+            StoredFileName = image.StoredFileName,
+            RelativePath = image.RelativePath,
+            ContentType = image.ContentType,
+            FileSize = image.FileSize,
+            CreatedUtc = image.CreatedUtc,
+            SortOrder = image.SortOrder,
+            SourceFilePath = image.SourceFilePath,
+            PreviewPath = image.PreviewPath
+        };
+    }
+
+    private static RecordAudioDraft CloneAudioDraft(RecordAudioDraft audio)
+    {
+        return new RecordAudioDraft
+        {
+            Id = audio.Id,
+            OriginalFileName = audio.OriginalFileName,
+            StoredFileName = audio.StoredFileName,
+            RelativePath = audio.RelativePath,
+            ContentType = audio.ContentType,
+            FileSize = audio.FileSize,
+            CreatedUtc = audio.CreatedUtc,
+            SortOrder = audio.SortOrder,
+            SourceFilePath = audio.SourceFilePath,
+            DisplayTitle = audio.DisplayTitle,
+            DurationSeconds = audio.DurationSeconds,
+            CoverRelativePath = audio.CoverRelativePath,
+            CoverPreviewPath = audio.CoverPreviewPath,
+            CoverBytes = audio.CoverBytes
+        };
     }
 
     private static IReadOnlyList<TimePartOptionViewModel> CreateTimePartOptions(int minValue, int maxValue)
@@ -433,27 +813,27 @@ public partial class RecordEditorViewModel : ObservableObject
 
     private static ObservableCollection<EventStatusOptionViewModel> CreateEventStatusOptions(ILocalizationService localizationService)
     {
-        return new ObservableCollection<EventStatusOptionViewModel>
-        {
-            new(localizationService, "EventStatus.Scheduled", EventStatus.Scheduled),
-            new(localizationService, "EventStatus.Completed", EventStatus.Completed),
-            new(localizationService, "EventStatus.Rescheduled", EventStatus.Rescheduled),
-            new(localizationService, "EventStatus.Canceled", EventStatus.Canceled)
-        };
+        return
+        [
+            new EventStatusOptionViewModel(localizationService, "EventStatus.Scheduled", EventStatus.Scheduled),
+            new EventStatusOptionViewModel(localizationService, "EventStatus.Completed", EventStatus.Completed),
+            new EventStatusOptionViewModel(localizationService, "EventStatus.Rescheduled", EventStatus.Rescheduled),
+            new EventStatusOptionViewModel(localizationService, "EventStatus.Canceled", EventStatus.Canceled)
+        ];
     }
 
     private static ObservableCollection<ReminderOptionViewModel> CreateReminderOptions(ILocalizationService localizationService)
     {
-        return new ObservableCollection<ReminderOptionViewModel>
-        {
-            new(localizationService, "Reminder.AtStart", 0),
-            new(localizationService, "Reminder.Before5Minutes", 5),
-            new(localizationService, "Reminder.Before10Minutes", 10),
-            new(localizationService, "Reminder.Before15Minutes", 15),
-            new(localizationService, "Reminder.Before30Minutes", 30),
-            new(localizationService, "Reminder.Before1Hour", 60),
-            new(localizationService, "Reminder.Before2Hours", 120),
-            new(localizationService, "Reminder.Before1Day", 1440)
-        };
+        return
+        [
+            new ReminderOptionViewModel(localizationService, "Reminder.AtStart", 0),
+            new ReminderOptionViewModel(localizationService, "Reminder.Before5Minutes", 5),
+            new ReminderOptionViewModel(localizationService, "Reminder.Before10Minutes", 10),
+            new ReminderOptionViewModel(localizationService, "Reminder.Before15Minutes", 15),
+            new ReminderOptionViewModel(localizationService, "Reminder.Before30Minutes", 30),
+            new ReminderOptionViewModel(localizationService, "Reminder.Before1Hour", 60),
+            new ReminderOptionViewModel(localizationService, "Reminder.Before2Hours", 120),
+            new ReminderOptionViewModel(localizationService, "Reminder.Before1Day", 1440)
+        ];
     }
 }

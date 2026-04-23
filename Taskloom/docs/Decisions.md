@@ -519,3 +519,21 @@ Status chips и semantic palettes доводить централизованн�
 - Пункт `Выход` в tray menu выполняет настоящее завершение приложения.
 - `WindowsBalloonAppNotificationService` использует `NotifyIcon`, которым владеет `WindowsTrayService`.
 - Добавлена временная `.ico`-иконка приложения.
+
+## 2026-04-23
+
+### Решение
+
+Использовать Windows App SDK `AppNotificationManager` как основной транспорт локальных уведомлений, а tray balloon оставить только fallback-реализацией.
+
+### Причина
+
+Tray balloon показывает короткую всплывашку и не является надёжным notification flow для Windows 11. Taskloom нужен транспорт, который интегрируется с центром уведомлений, при этом существующий планировщик событий не должен зависеть от конкретной реализации показа.
+
+### Последствия
+
+- Проект подключает `Microsoft.WindowsAppSDK`.
+- Target framework уточнён до `net10.0-windows10.0.19041.0`, добавлены `WindowsPackageType=None` и runtime identifiers для unpackaged WPF-приложения.
+- `WindowsAppSdkNotificationService` регистрирует приложение в `AppNotificationManager` и показывает уведомления через Windows App SDK.
+- При неподдержанной среде или runtime-ошибке уведомления уходят в существующий `WindowsBalloonAppNotificationService`.
+- Следующий функциональный этап может добавлять напоминания задач через тот же `IAppNotificationService`.

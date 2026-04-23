@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:converters="clr-namespace:Taskloom.Common.Converters"
+        xmlns:text="clr-namespace:Taskloom.Common.Text"
         xmlns:domain="clr-namespace:Taskloom.Domain"
         xmlns:markup="clr-namespace:Taskloom.Common.Markup"
         mc:Ignorable="d"
@@ -29,6 +30,8 @@
 
     <Window.Resources>
         <converters:AdaptiveCardWidthConverter x:Key="AdaptiveCardWidthConverter" />
+        <converters:ImagePathToBitmapConverter x:Key="ImagePathToBitmapConverter" />
+        <converters:AudioCoverSourceToBitmapConverter x:Key="AudioCoverSourceToBitmapConverter" />
         <Style x:Key="CalendarPanelButtonStyle" TargetType="{x:Type CalendarButton}">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
@@ -552,7 +555,7 @@
                                 x:Name="RecordsList"
                                 Margin="14"
                                 ItemsSource="{Binding Records}"
-                                MouseDoubleClick="RecordsList_OnMouseDoubleClick"
+                                PreviewMouseDoubleClick="RecordsList_OnPreviewMouseDoubleClick"
                                 Background="Transparent"
                                 BorderThickness="0"
                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -602,7 +605,7 @@
                                     <DataTemplate>
                                         <Border
                                             x:Name="CardRoot"
-                                            MinHeight="176"
+                                            MinHeight="220"
                                             Background="{DynamicResource App.SurfacePrimaryBrush}"
                                             BorderBrush="{DynamicResource App.BorderBrush}"
                                             BorderThickness="1"
@@ -629,6 +632,8 @@
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="*" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
 
                                                     <Border
@@ -707,9 +712,946 @@
                                                         Margin="0,10,0,0"
                                                         Foreground="{DynamicResource App.TextSecondaryBrush}"
                                                         MaxHeight="84"
-                                                        Text="{Binding Details}"
+                                                        text:TextBlockLinkBehavior.LinkText="{Binding Details}"
                                                         TextTrimming="WordEllipsis"
                                                         TextWrapping="Wrap" />
+
+                                                    <ItemsControl
+                                                        x:Name="AudioHost"
+                                                        Grid.Row="4"
+                                                        Grid.ColumnSpan="2"
+                                                        Margin="0,12,0,0"
+                                                        ItemsSource="{Binding Audios}"
+                                                        Visibility="Collapsed">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border
+                                                                    Margin="0,0,0,10"
+                                                                    Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="12"
+                                                                    Padding="10">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="60" />
+                                                                            <ColumnDefinition Width="12" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <Grid.RowDefinitions>
+                                                                            <RowDefinition Height="Auto" />
+                                                                            <RowDefinition Height="Auto" />
+                                                                            <RowDefinition Height="Auto" />
+                                                                        </Grid.RowDefinitions>
+
+                                                                    <Border
+                                                                        Grid.RowSpan="3"
+                                                                        Width="60"
+                                                                        Height="60"
+                                                                        Background="{DynamicResource App.SurfacePrimaryBrush}"
+                                                                        BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="0">
+                                                                        <Grid>
+                                                                            <Image
+                                                                                Stretch="UniformToFill"
+                                                                                Source="{Binding CoverPath, Converter={StaticResource AudioCoverSourceToBitmapConverter}}">
+                                                                                <Image.Style>
+                                                                                    <Style TargetType="Image">
+                                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger Binding="{Binding HasCover}" Value="False">
+                                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </Image.Style>
+                                                                            </Image>
+                                                                            <TextBlock
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center"
+                                                                                FontFamily="Segoe MDL2 Assets"
+                                                                                FontSize="18"
+                                                                                Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                                                Text="&#xE189;">
+                                                                                <TextBlock.Style>
+                                                                                    <Style TargetType="TextBlock">
+                                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger Binding="{Binding HasCover}" Value="False">
+                                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </TextBlock.Style>
+                                                                            </TextBlock>
+                                                                        </Grid>
+                                                                    </Border>
+
+                                                                        <TextBlock
+                                                                            Grid.Column="2"
+                                                                            FontWeight="SemiBold"
+                                                                            Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                                                            Text="{Binding DisplayTitle}"
+                                                                            TextTrimming="CharacterEllipsis" />
+
+                                                                        <StackPanel
+                                                                            Grid.Column="3"
+                                                                            Orientation="Horizontal">
+                                                                            <Button
+                                                                                Width="34"
+                                                                                Height="34"
+                                                                                Margin="0,0,6,0"
+                                                                                Background="{DynamicResource App.SurfacePrimaryBrush}"
+                                                                                BorderBrush="{DynamicResource App.BorderStrongBrush}"
+                                                                                BorderThickness="1"
+                                                                                Command="{Binding DataContext.ToggleAudioPlaybackCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                CommandParameter="{Binding}"
+                                                                                Cursor="Hand"
+                                                                                FocusVisualStyle="{x:Null}">
+                                                                                <Grid
+                                                                                    Width="12"
+                                                                                    Height="12"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center">
+                                                                                    <Polygon
+                                                                                        Fill="{DynamicResource App.TextPrimaryBrush}"
+                                                                                        Points="0,0 12,6 0,12">
+                                                                                        <Polygon.Style>
+                                                                                            <Style TargetType="Polygon">
+                                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                                                <Style.Triggers>
+                                                                                                    <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                                                    </DataTrigger>
+                                                                                                </Style.Triggers>
+                                                                                            </Style>
+                                                                                        </Polygon.Style>
+                                                                                    </Polygon>
+                                                                                    <Rectangle
+                                                                                        Width="10"
+                                                                                        Height="10"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Fill="{DynamicResource App.TextPrimaryBrush}">
+                                                                                        <Rectangle.Style>
+                                                                                            <Style TargetType="Rectangle">
+                                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                                                <Style.Triggers>
+                                                                                                    <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                                                    </DataTrigger>
+                                                                                                </Style.Triggers>
+                                                                                            </Style>
+                                                                                        </Rectangle.Style>
+                                                                                    </Rectangle>
+                                                                                </Grid>
+                                                                            </Button>
+                                                                            <Button
+                                                                                Width="34"
+                                                                                Height="34"
+                                                                                Background="{DynamicResource App.SurfacePrimaryBrush}"
+                                                                                BorderBrush="{DynamicResource App.BorderStrongBrush}"
+                                                                                BorderThickness="1"
+                                                                                Command="{Binding DataContext.OpenRecordAudioCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                CommandParameter="{Binding}"
+                                                                                Cursor="Hand"
+                                                                                FocusVisualStyle="{x:Null}">
+                                                                                <TextBlock
+                                                                                    FontFamily="Segoe MDL2 Assets"
+                                                                                    FontSize="14"
+                                                                                    Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                                                                    Text="&#xE8A7;" />
+                                                                            </Button>
+                                                                        </StackPanel>
+
+                                                                        <TextBlock
+                                                                            Grid.Row="1"
+                                                                            Grid.Column="2"
+                                                                            Margin="0,4,0,0"
+                                                                            Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                                            Text="{Binding FileName}"
+                                                                            TextTrimming="CharacterEllipsis" />
+
+                                                                        <Grid
+                                                                            Grid.Row="2"
+                                                                            Grid.Column="2"
+                                                                            Grid.ColumnSpan="2"
+                                                                            Margin="0,8,0,0">
+                                                                            <Grid.ColumnDefinitions>
+                                                                                <ColumnDefinition Width="56" />
+                                                                                <ColumnDefinition Width="*" />
+                                                                                <ColumnDefinition Width="56" />
+                                                                            </Grid.ColumnDefinitions>
+                                                                            <TextBlock
+                                                                                VerticalAlignment="Center"
+                                                                                Foreground="{DynamicResource App.TextMutedBrush}"
+                                                                                Text="{Binding PlaybackPositionText}" />
+                                                                            <Slider
+                                                                                Grid.Column="1"
+                                                                                Margin="10,0"
+                                                                                IsMoveToPointEnabled="True"
+                                                                                Maximum="{Binding ProgressMaximum}"
+                                                                                Minimum="0"
+                                                                                PreviewMouseLeftButtonUp="AudioSeekSlider_OnPreviewMouseLeftButtonUp"
+                                                                                Tag="{Binding}"
+                                                                                ValueChanged="AudioSeekSlider_OnValueChanged"
+                                                                                Value="{Binding ProgressValue, Mode=TwoWay}">
+                                                                                <Slider.Resources>
+                                                                                    <Style TargetType="Thumb">
+                                                                                        <EventSetter Event="DragStarted" Handler="AudioSeekSlider_OnDragStarted" />
+                                                                                        <EventSetter Event="DragCompleted" Handler="AudioSeekSlider_OnDragCompleted" />
+                                                                                    </Style>
+                                                                                </Slider.Resources>
+                                                                            </Slider>
+                                                                            <TextBlock
+                                                                                Grid.Column="2"
+                                                                                HorizontalAlignment="Right"
+                                                                                VerticalAlignment="Center"
+                                                                                Foreground="{DynamicResource App.TextMutedBrush}"
+                                                                                Text="{Binding PlaybackDurationText}" />
+                                                                        </Grid>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <StackPanel
+                                                        x:Name="ImagesHost"
+                                                        Grid.Row="5"
+                                                        Grid.ColumnSpan="2"
+                                                        Margin="0,12,0,0"
+                                                        Visibility="Collapsed">
+                                                        <Grid
+                                                            x:Name="SingleImageLayout"
+                                                            Visibility="Collapsed">
+                                                            <Button
+                                                                Height="220"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FirstImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FirstImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FirstImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=520}" />
+                                                                </Border>
+                                                            </Button>
+                                                        </Grid>
+
+                                                        <Grid
+                                                            x:Name="TwoImagesLayout"
+                                                            Height="168"
+                                                            Visibility="Collapsed">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <Button
+                                                                Grid.Column="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FirstImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FirstImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FirstImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=320}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding SecondImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding SecondImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding SecondImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=320}" />
+                                                                </Border>
+                                                            </Button>
+                                                        </Grid>
+
+                                                        <Grid
+                                                            x:Name="ThreeImagesLayout"
+                                                            Height="220"
+                                                            Visibility="Collapsed">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="1.35*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="1*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="*" />
+                                                                <RowDefinition Height="8" />
+                                                                <RowDefinition Height="*" />
+                                                            </Grid.RowDefinitions>
+
+                                                            <Button
+                                                                Grid.Column="0"
+                                                                Grid.RowSpan="3"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FirstImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FirstImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FirstImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=420}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Grid.Row="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding SecondImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding SecondImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding SecondImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=240}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Grid.Row="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding ThirdImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding ThirdImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding ThirdImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=240}" />
+                                                                </Border>
+                                                            </Button>
+                                                        </Grid>
+
+                                                        <Grid
+                                                            x:Name="FourImagesLayout"
+                                                            Height="240"
+                                                            Visibility="Collapsed">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="*" />
+                                                                <RowDefinition Height="8" />
+                                                                <RowDefinition Height="*" />
+                                                            </Grid.RowDefinitions>
+
+                                                            <Button
+                                                                Grid.Column="0"
+                                                                Grid.Row="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FirstImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FirstImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FirstImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=220}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Grid.Row="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding SecondImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding SecondImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding SecondImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=220}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="4"
+                                                                Grid.Row="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding ThirdImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding ThirdImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding ThirdImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=220}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="0"
+                                                                Grid.Row="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FourthImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FourthImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FourthImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=220}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Grid.Row="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FifthImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FifthImage.FileName}">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <ContentPresenter />
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding FifthImage}" Value="{x:Null}">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FifthImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=220}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="4"
+                                                                Grid.Row="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding SixthImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding SixthImage.FileName}">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <ContentPresenter />
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding SixthImage}" Value="{x:Null}">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding SixthImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=220}" />
+                                                                </Border>
+                                                            </Button>
+                                                        </Grid>
+
+                                                        <Grid
+                                                            x:Name="SevenPlusImagesLayout"
+                                                            Height="276"
+                                                            Visibility="Collapsed">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="*" />
+                                                                <RowDefinition Height="8" />
+                                                                <RowDefinition Height="*" />
+                                                                <RowDefinition Height="8" />
+                                                                <RowDefinition Height="*" />
+                                                            </Grid.RowDefinitions>
+
+                                                            <Button
+                                                                Grid.Column="0"
+                                                                Grid.Row="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FirstImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FirstImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FirstImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Grid.Row="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding SecondImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding SecondImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding SecondImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="4"
+                                                                Grid.Row="0"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding ThirdImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding ThirdImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding ThirdImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="0"
+                                                                Grid.Row="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FourthImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FourthImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FourthImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Grid.Row="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding FifthImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding FifthImage.FileName}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter />
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding FifthImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="4"
+                                                                Grid.Row="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding SixthImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding SixthImage.FileName}">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <ContentPresenter />
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding SixthImage}" Value="{x:Null}">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding SixthImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="0"
+                                                                Grid.Row="4"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding SeventhImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding SeventhImage.FileName}">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <ContentPresenter />
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding SeventhImage}" Value="{x:Null}">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding SeventhImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Grid.Row="4"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding EighthImage}"
+                                                                Cursor="Hand"
+                                                                FocusVisualStyle="{x:Null}"
+                                                                Padding="0"
+                                                                ToolTip="{Binding EighthImage.FileName}">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <ContentPresenter />
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding EighthImage}" Value="{x:Null}">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                                <Border
+                                                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="10"
+                                                                    Padding="8">
+                                                                    <Image
+                                                                        Stretch="Uniform"
+                                                                        Source="{Binding EighthImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                </Border>
+                                                            </Button>
+
+                                                            <Grid Grid.Column="4" Grid.Row="4">
+                                                                <Button
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    Command="{Binding DataContext.OpenRecordImageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding NinthImage}"
+                                                                    Cursor="Hand"
+                                                                    FocusVisualStyle="{x:Null}"
+                                                                    Padding="0"
+                                                                    ToolTip="{Binding NinthImage.FileName}">
+                                                                    <Button.Style>
+                                                                        <Style TargetType="Button">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                            <Setter Property="Template">
+                                                                                <Setter.Value>
+                                                                                    <ControlTemplate TargetType="Button">
+                                                                                        <ContentPresenter />
+                                                                                    </ControlTemplate>
+                                                                                </Setter.Value>
+                                                                            </Setter>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding NinthImage}" Value="{x:Null}">
+                                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Button.Style>
+                                                                    <Border
+                                                                        BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="10"
+                                                                        Padding="8">
+                                                                        <Image
+                                                                            Stretch="Uniform"
+                                                                            Source="{Binding NinthImage.Path, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=180}" />
+                                                                    </Border>
+                                                                </Button>
+
+                                                                <Border
+                                                                    Background="#66000000"
+                                                                    CornerRadius="10">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding HasAdditionalImages}" Value="True">
+                                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                    <TextBlock
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"
+                                                                        FontSize="24"
+                                                                        FontWeight="SemiBold"
+                                                                        Foreground="White"
+                                                                        Text="{Binding AdditionalImageCount, StringFormat=+{0}}" />
+                                                                </Border>
+                                                            </Grid>
+                                                        </Grid>
+
+                                                    </StackPanel>
                                                 </Grid>
                                             </Grid>
                                         </Border>
@@ -757,6 +1699,34 @@
 
                                             <DataTrigger Binding="{Binding HasLocation}" Value="True">
                                                 <Setter TargetName="EventLocationText" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasImages}" Value="True">
+                                                <Setter TargetName="ImagesHost" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasAudios}" Value="True">
+                                                <Setter TargetName="AudioHost" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasSingleImage}" Value="True">
+                                                <Setter TargetName="SingleImageLayout" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasTwoImages}" Value="True">
+                                                <Setter TargetName="TwoImagesLayout" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasThreeImages}" Value="True">
+                                                <Setter TargetName="ThreeImagesLayout" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasFourToSixImages}" Value="True">
+                                                <Setter TargetName="FourImagesLayout" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasSevenOrMoreImages}" Value="True">
+                                                <Setter TargetName="SevenPlusImagesLayout" Property="Visibility" Value="Visible" />
                                             </DataTrigger>
 
                                             <DataTrigger Binding="{Binding IsCompleted}" Value="True">

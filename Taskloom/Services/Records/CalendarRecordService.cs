@@ -8,10 +8,17 @@ namespace Taskloom.Services.Records;
 public sealed class CalendarRecordService : ICalendarRecordService
 {
     private readonly ICalendarRecordRepository _repository;
+    private readonly IRecordImageStorageService _imageStorageService;
+    private readonly IRecordAudioStorageService _audioStorageService;
 
-    public CalendarRecordService(ICalendarRecordRepository repository)
+    public CalendarRecordService(
+        ICalendarRecordRepository repository,
+        IRecordImageStorageService imageStorageService,
+        IRecordAudioStorageService audioStorageService)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
+        _audioStorageService = audioStorageService ?? throw new ArgumentNullException(nameof(audioStorageService));
     }
 
     /// <inheritdoc />
@@ -35,16 +42,47 @@ public sealed class CalendarRecordService : ICalendarRecordService
     {
         ArgumentNullException.ThrowIfNull(draft);
 
-        var record = CreateRecord(draft);
-        await _repository.SaveAsync(record, cancellationToken);
+        var existingRecord = draft.Id.HasValue
+            ? await _repository.GetByIdAsync(draft.Id.Value, cancellationToken)
+            : null;
+
+        var (record, importedRelativePaths) = await CreateRecordAsync(draft, existingRecord, cancellationToken);
+
+        try
+        {
+            await _repository.SaveAsync(record, cancellationToken);
+        }
+        catch
+        {
+            foreach (var relativePath in importedRelativePaths)
+            {
+                DeleteImportedAttachmentPath(relativePath);
+            }
+
+            throw;
+        }
+
+        DeleteRemovedImages(existingRecord?.ImageAttachments ?? [], record.ImageAttachments);
+        DeleteRemovedAudios(existingRecord?.AudioAttachments ?? [], record.AudioAttachments);
 
         return record;
     }
 
     /// <inheritdoc />
-    public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return _repository.DeleteAsync(id, cancellationToken);
+        var existingRecord = await _repository.GetByIdAsync(id, cancellationToken);
+        await _repository.DeleteAsync(id, cancellationToken);
+
+        foreach (var attachment in existingRecord?.ImageAttachments ?? [])
+        {
+            _imageStorageService.DeleteIfExists(attachment.RelativePath);
+        }
+
+        foreach (var attachment in existingRecord?.AudioAttachments ?? [])
+        {
+            DeleteAudioAttachmentFiles(attachment);
+        }
     }
 
     /// <inheritdoc />
@@ -75,18 +113,22 @@ public sealed class CalendarRecordService : ICalendarRecordService
         return taskRecord;
     }
 
-    private static CalendarRecord CreateRecord(CalendarRecordDraft draft)
+    private async Task<(CalendarRecord Record, List<string> ImportedRelativePaths)> CreateRecordAsync(
+        CalendarRecordDraft draft,
+        CalendarRecord? existingRecord,
+        CancellationToken cancellationToken)
     {
         var id = draft.Id ?? Guid.NewGuid();
 
-        return draft.Type switch
+        CalendarRecord record = draft.Type switch
         {
             RecordType.Task => new TaskRecord(
                 id,
                 draft.Date,
                 draft.Title,
                 draft.Details,
-                draft.IsCompleted),
+                draft.IsCompleted,
+                draft.TaskReminderTime),
 
             RecordType.Note => new NoteRecord(
                 id,
@@ -113,6 +155,36 @@ public sealed class CalendarRecordService : ICalendarRecordService
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {draft.Type}.")
         };
+
+        var resolvedImages = await ResolveImageAttachmentsAsync(
+            draft.Images,
+            existingRecord?.ImageAttachments ?? [],
+            id,
+            cancellationToken);
+
+        var resolvedAudios = await ResolveAudioAttachmentsAsync(
+            draft.Audios,
+            existingRecord?.AudioAttachments ?? [],
+            id,
+            cancellationToken);
+
+        var attachments = resolvedImages.Attachments
+            .Concat(resolvedAudios.Attachments)
+            .OrderBy(static attachment => attachment.Kind)
+            .ThenBy(static attachment => attachment.SortOrder)
+            .ThenBy(static attachment => attachment.CreatedUtc)
+            .ToArray();
+
+        if (attachments.Length > 0)
+        {
+            record.ReplaceAttachments(attachments);
+        }
+
+        return (
+            record,
+            resolvedImages.ImportedRelativePaths
+                .Concat(resolvedAudios.ImportedRelativePaths)
+                .ToList());
     }
 
     private static CalendarRecordDraft MapToDraft(CalendarRecord record)
@@ -123,13 +195,16 @@ public sealed class CalendarRecordService : ICalendarRecordService
             Type = record.Type,
             Date = record.Date,
             Title = record.Title,
-            Details = record.Details
+            Details = record.Details,
+            Images = record.ImageAttachments.Select(MapImageToDraft).ToList(),
+            Audios = record.AudioAttachments.Select(MapAudioToDraft).ToList()
         };
 
         switch (record)
         {
             case TaskRecord taskRecord:
                 draft.IsCompleted = taskRecord.IsCompleted;
+                draft.TaskReminderTime = taskRecord.ReminderTime;
                 break;
 
             case EventRecord eventRecord:
@@ -148,5 +223,191 @@ public sealed class CalendarRecordService : ICalendarRecordService
     {
         return value ?? throw new InvalidOperationException(
             $"Для записи типа Event обязательно значение {propertyName}.");
+    }
+
+    private async Task<(List<RecordAttachment> Attachments, List<string> ImportedRelativePaths)> ResolveImageAttachmentsAsync(
+        IReadOnlyList<RecordImageDraft> imageDrafts,
+        IReadOnlyList<RecordAttachment> existingAttachments,
+        Guid recordId,
+        CancellationToken cancellationToken)
+    {
+        var attachments = new List<RecordAttachment>();
+        var importedRelativePaths = new List<string>();
+
+        foreach (var imageDraft in imageDrafts.OrderBy(static image => image.SortOrder))
+        {
+            if (imageDraft.IsPendingImport)
+            {
+                var importedAttachment = await _imageStorageService.ImportImageAsync(
+                    recordId,
+                    imageDraft.SourceFilePath!,
+                    imageDraft.SortOrder,
+                    cancellationToken);
+
+                attachments.Add(importedAttachment);
+                importedRelativePaths.Add(importedAttachment.RelativePath);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(imageDraft.RelativePath))
+            {
+                continue;
+            }
+
+            var existingAttachment = existingAttachments.FirstOrDefault(attachment =>
+                string.Equals(attachment.RelativePath, imageDraft.RelativePath, StringComparison.OrdinalIgnoreCase));
+
+            attachments.Add(new RecordAttachment(
+                existingAttachment?.Id ?? imageDraft.Id ?? Guid.NewGuid(),
+                recordId,
+                RecordAttachmentKind.Image,
+                imageDraft.OriginalFileName,
+                imageDraft.StoredFileName,
+                imageDraft.RelativePath,
+                imageDraft.ContentType,
+                imageDraft.FileSize,
+                imageDraft.CreatedUtc == default ? DateTime.UtcNow : imageDraft.CreatedUtc,
+                imageDraft.SortOrder));
+        }
+
+        return (attachments, importedRelativePaths);
+    }
+
+    private async Task<(List<RecordAttachment> Attachments, List<string> ImportedRelativePaths)> ResolveAudioAttachmentsAsync(
+        IReadOnlyList<RecordAudioDraft> audioDrafts,
+        IReadOnlyList<RecordAttachment> existingAttachments,
+        Guid recordId,
+        CancellationToken cancellationToken)
+    {
+        var attachments = new List<RecordAttachment>();
+        var importedRelativePaths = new List<string>();
+
+        foreach (var audioDraft in audioDrafts.OrderBy(static audio => audio.SortOrder))
+        {
+            if (audioDraft.IsPendingImport)
+            {
+                var importedAttachment = await _audioStorageService.ImportAudioAsync(recordId, audioDraft, cancellationToken);
+
+                attachments.Add(importedAttachment);
+                importedRelativePaths.Add(importedAttachment.RelativePath);
+
+                if (!string.IsNullOrWhiteSpace(importedAttachment.PreviewRelativePath))
+                {
+                    importedRelativePaths.Add(importedAttachment.PreviewRelativePath);
+                }
+
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(audioDraft.RelativePath))
+            {
+                continue;
+            }
+
+            var existingAttachment = existingAttachments.FirstOrDefault(attachment =>
+                string.Equals(attachment.RelativePath, audioDraft.RelativePath, StringComparison.OrdinalIgnoreCase));
+
+            attachments.Add(new RecordAttachment(
+                existingAttachment?.Id ?? audioDraft.Id ?? Guid.NewGuid(),
+                recordId,
+                RecordAttachmentKind.Audio,
+                audioDraft.OriginalFileName,
+                audioDraft.StoredFileName,
+                audioDraft.RelativePath,
+                audioDraft.ContentType,
+                audioDraft.FileSize,
+                audioDraft.CreatedUtc == default ? DateTime.UtcNow : audioDraft.CreatedUtc,
+                audioDraft.SortOrder,
+                audioDraft.DisplayTitle,
+                audioDraft.DurationSeconds,
+                audioDraft.CoverRelativePath));
+        }
+
+        return (attachments, importedRelativePaths);
+    }
+
+    private void DeleteRemovedImages(
+        IReadOnlyList<RecordAttachment> previousAttachments,
+        IReadOnlyList<RecordAttachment> currentAttachments)
+    {
+        var currentPaths = currentAttachments
+            .Select(attachment => attachment.RelativePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var previousAttachment in previousAttachments)
+        {
+            if (!currentPaths.Contains(previousAttachment.RelativePath))
+            {
+                _imageStorageService.DeleteIfExists(previousAttachment.RelativePath);
+            }
+        }
+    }
+
+    private void DeleteRemovedAudios(
+        IReadOnlyList<RecordAttachment> previousAttachments,
+        IReadOnlyList<RecordAttachment> currentAttachments)
+    {
+        var currentPaths = currentAttachments
+            .Select(attachment => attachment.RelativePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var previousAttachment in previousAttachments)
+        {
+            if (!currentPaths.Contains(previousAttachment.RelativePath))
+            {
+                DeleteAudioAttachmentFiles(previousAttachment);
+            }
+        }
+    }
+
+    private void DeleteAudioAttachmentFiles(RecordAttachment attachment)
+    {
+        _audioStorageService.DeleteIfExists(attachment.RelativePath);
+        _audioStorageService.DeleteIfExists(attachment.PreviewRelativePath);
+    }
+
+    private void DeleteImportedAttachmentPath(string relativePath)
+    {
+        if (relativePath.Contains("Audio", StringComparison.OrdinalIgnoreCase))
+        {
+            _audioStorageService.DeleteIfExists(relativePath);
+            return;
+        }
+
+        _imageStorageService.DeleteIfExists(relativePath);
+    }
+
+    private static RecordImageDraft MapImageToDraft(RecordAttachment attachment)
+    {
+        return new RecordImageDraft
+        {
+            Id = attachment.Id,
+            OriginalFileName = attachment.OriginalFileName,
+            StoredFileName = attachment.StoredFileName,
+            RelativePath = attachment.RelativePath,
+            ContentType = attachment.ContentType,
+            FileSize = attachment.FileSize,
+            CreatedUtc = attachment.CreatedUtc,
+            SortOrder = attachment.SortOrder,
+            PreviewPath = null
+        };
+    }
+
+    private static RecordAudioDraft MapAudioToDraft(RecordAttachment attachment)
+    {
+        return new RecordAudioDraft
+        {
+            Id = attachment.Id,
+            OriginalFileName = attachment.OriginalFileName,
+            StoredFileName = attachment.StoredFileName,
+            RelativePath = attachment.RelativePath,
+            ContentType = attachment.ContentType,
+            FileSize = attachment.FileSize,
+            CreatedUtc = attachment.CreatedUtc,
+            SortOrder = attachment.SortOrder,
+            DisplayTitle = attachment.DisplayTitle,
+            DurationSeconds = attachment.DurationSeconds,
+            CoverRelativePath = attachment.PreviewRelativePath
+        };
     }
 }

@@ -1,8 +1,12 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Taskloom.Infrastructure.Storage;
 using Taskloom.Domain;
 using Taskloom.Services.Localization;
+using Taskloom.Services.Media;
 using Taskloom.Services.Records;
 using Taskloom.Services.Settings;
 
@@ -16,16 +20,26 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ICalendarRecordService _recordService;
     private readonly ILocalizationService _localizationService;
     private readonly IAppSettingsService _settingsService;
+    private readonly IRecordImageStorageService _imageStorageService;
+    private readonly IRecordAudioStorageService _audioStorageService;
+    private readonly IAudioPlaybackService _audioPlaybackService;
+    private readonly string _recordLoadLogPath = TaskloomPaths.GetRecordLoadLogPath();
     private bool _isInitialized;
 
     public MainWindowViewModel(
         ICalendarRecordService recordService,
         ILocalizationService localizationService,
-        IAppSettingsService settingsService)
+        IAppSettingsService settingsService,
+        IRecordImageStorageService imageStorageService,
+        IRecordAudioStorageService audioStorageService,
+        IAudioPlaybackService audioPlaybackService)
     {
         _recordService = recordService ?? throw new ArgumentNullException(nameof(recordService));
         _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
+        _audioStorageService = audioStorageService ?? throw new ArgumentNullException(nameof(audioStorageService));
+        _audioPlaybackService = audioPlaybackService ?? throw new ArgumentNullException(nameof(audioPlaybackService));
 
         Records = new ObservableCollection<RecordListItemViewModel>();
         FilterOptions = new ObservableCollection<RecordTypeFilterOptionViewModel>();
@@ -35,6 +49,9 @@ public partial class MainWindowViewModel : ObservableObject
         OpenEditRecordCommand = new AsyncRelayCommand(OpenEditRecordAsync, CanOpenEditRecord);
         DeleteRecordCommand = new AsyncRelayCommand(DeleteSelectedRecordAsync, CanDeleteSelectedRecord);
         ToggleTaskCompletionCommand = new AsyncRelayCommand<RecordListItemViewModel?>(ToggleTaskCompletionAsync, CanToggleTaskCompletion);
+        OpenRecordImageCommand = new RelayCommand<RecordImageListItemViewModel?>(OpenRecordImage, CanOpenRecordImage);
+        OpenRecordAudioCommand = new RelayCommand<RecordAudioListItemViewModel?>(OpenRecordAudio, CanOpenRecordAudio);
+        ToggleAudioPlaybackCommand = new RelayCommand<RecordAudioListItemViewModel?>(ToggleAudioPlayback, CanToggleAudioPlayback);
         PreviousDayCommand = new RelayCommand(MoveToPreviousDay);
         NextDayCommand = new RelayCommand(MoveToNextDay);
         RefreshCommand = new AsyncRelayCommand(LoadRecordsAsync);
@@ -64,6 +81,12 @@ public partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand DeleteRecordCommand { get; }
 
     public IAsyncRelayCommand<RecordListItemViewModel?> ToggleTaskCompletionCommand { get; }
+
+    public IRelayCommand<RecordImageListItemViewModel?> OpenRecordImageCommand { get; }
+
+    public IRelayCommand<RecordAudioListItemViewModel?> OpenRecordAudioCommand { get; }
+
+    public IRelayCommand<RecordAudioListItemViewModel?> ToggleAudioPlaybackCommand { get; }
 
     public IRelayCommand PreviousDayCommand { get; }
 
@@ -103,12 +126,34 @@ public partial class MainWindowViewModel : ObservableObject
         set => SelectedDate = DateOnly.FromDateTime(value);
     }
 
-    /// <summary>
-    /// Выполняет начальную загрузку данных окна.
-    /// </summary>
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         return LoadRecordsAsync(cancellationToken);
+    }
+
+    public void SeekAudio(RecordAudioListItemViewModel? item, double seconds)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.Path))
+        {
+            return;
+        }
+
+        _audioPlaybackService.Seek(item.Path, TimeSpan.FromSeconds(seconds));
+    }
+
+    public void BeginSeekAudio(RecordAudioListItemViewModel? item)
+    {
+        item?.BeginSeek();
+    }
+
+    public void UpdateSeekAudioPreview(RecordAudioListItemViewModel? item, double seconds)
+    {
+        item?.UpdateSeekPreview(seconds);
+    }
+
+    public void EndSeekAudio(RecordAudioListItemViewModel? item)
+    {
+        item?.EndSeek();
     }
 
     partial void OnSelectedDateChanged(DateOnly value)
@@ -160,16 +205,40 @@ public partial class MainWindowViewModel : ObservableObject
                 SelectedFilter.RecordType,
                 cancellationToken);
 
-            Records.Clear();
+            ClearRecords();
+            var skippedRecordsCount = 0;
 
             foreach (var record in records)
             {
-                Records.Add(RecordListItemViewModel.Create(record, _localizationService));
+                try
+                {
+                    Records.Add(RecordListItemViewModel.Create(
+                        record,
+                        _localizationService,
+                        _imageStorageService,
+                        _audioStorageService,
+                        _audioPlaybackService));
+                }
+                catch (Exception exception)
+                {
+                    skippedRecordsCount++;
+                    TaskloomDiagnosticLog.AppendException(
+                        _recordLoadLogPath,
+                        exception,
+                        $"Failed to build record view model. RecordId={record.Id}, Type={record.Type}, Title='{record.Title}'");
+                }
             }
 
             StatusText = Records.Count == 0
                 ? _localizationService.GetString("MainWindow.Status.NoRecords")
                 : _localizationService.Format("MainWindow.Status.RecordsFound", Records.Count);
+
+            if (skippedRecordsCount > 0)
+            {
+                TaskloomDiagnosticLog.Append(
+                    _recordLoadLogPath,
+                    $"Skipped records during load: {skippedRecordsCount}. SelectedDate={SelectedDate:yyyy-MM-dd}.");
+            }
 
             if (SelectedRecord is not null)
             {
@@ -188,7 +257,9 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedDate,
             SaveEditorAsync,
             CloseEditor,
-            _localizationService);
+            _localizationService,
+            _imageStorageService,
+            _audioStorageService);
         StatusText = _localizationService.GetString("MainWindow.Status.NewRecordPrepared");
     }
 
@@ -211,7 +282,9 @@ public partial class MainWindowViewModel : ObservableObject
             draft,
             SaveEditorAsync,
             CloseEditor,
-            _localizationService);
+            _localizationService,
+            _imageStorageService,
+            _audioStorageService);
         StatusText = _localizationService.GetString("MainWindow.Status.EditRecordPrepared");
     }
 
@@ -254,6 +327,80 @@ public partial class MainWindowViewModel : ObservableObject
     private bool CanToggleTaskCompletion(RecordListItemViewModel? item)
     {
         return item is { IsTask: true } && !IsBusy;
+    }
+
+    private void OpenRecordImage(RecordImageListItemViewModel? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.Path))
+        {
+            return;
+        }
+
+        if (!File.Exists(item.Path))
+        {
+            StatusText = _localizationService.GetString("MainWindow.Status.ImageMissing");
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo(item.Path)
+        {
+            UseShellExecute = true
+        });
+
+        StatusText = _localizationService.Format("MainWindow.Status.ImageOpened", item.FileName);
+    }
+
+    private static bool CanOpenRecordImage(RecordImageListItemViewModel? item)
+    {
+        return item is not null && !string.IsNullOrWhiteSpace(item.Path);
+    }
+
+    private void OpenRecordAudio(RecordAudioListItemViewModel? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.Path))
+        {
+            return;
+        }
+
+        if (!File.Exists(item.Path))
+        {
+            StatusText = _localizationService.GetString("MainWindow.Status.AudioMissing");
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo(item.Path)
+        {
+            UseShellExecute = true
+        });
+
+        StatusText = _localizationService.Format("MainWindow.Status.AudioOpened", item.DisplayTitle);
+    }
+
+    private static bool CanOpenRecordAudio(RecordAudioListItemViewModel? item)
+    {
+        return item is not null && !string.IsNullOrWhiteSpace(item.Path);
+    }
+
+    private void ToggleAudioPlayback(RecordAudioListItemViewModel? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.Path))
+        {
+            return;
+        }
+
+        if (!File.Exists(item.Path))
+        {
+            StatusText = _localizationService.GetString("MainWindow.Status.AudioMissing");
+            return;
+        }
+
+        _audioPlaybackService.TogglePlayback(item.Path);
+        StatusText = _localizationService.Format("MainWindow.Status.AudioPlaybackChanged", item.DisplayTitle);
+    }
+
+    private static bool CanToggleAudioPlayback(RecordAudioListItemViewModel? item)
+    {
+        return item is not null && !string.IsNullOrWhiteSpace(item.Path);
     }
 
     private void MoveToPreviousDay()
@@ -307,6 +454,16 @@ public partial class MainWindowViewModel : ObservableObject
     {
         ActiveSettings = null;
         StatusText = _localizationService.GetString("MainWindow.Status.SettingsClosed");
+    }
+
+    private void ClearRecords()
+    {
+        foreach (var item in Records)
+        {
+            item.Dispose();
+        }
+
+        Records.Clear();
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)

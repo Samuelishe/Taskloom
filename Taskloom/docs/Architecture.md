@@ -25,6 +25,13 @@
 - Документация в `docs` считается частью исходников проекта и коммитится наравне с кодом.
 - `.gitignore` должен исключать IDE-мусор, build outputs и локальные артефакты SQLite, но не должен исключать проектную документацию.
 
+## Зависимости среды выполнения
+
+- Приложение собирается под `net10.0-windows10.0.19041.0`.
+- Для обычного запуска пользователю нужен установленный .NET 10 Desktop Runtime.
+- Для Windows App SDK notifications в центре уведомлений нужен установленный Windows App Runtime 1.8.
+- Если Windows App Runtime 1.8 отсутствует или его пакеты установлены неполно, `AppNotificationManager` может не зарегистрироваться, и приложение должно перейти на fallback через `WindowsBalloonAppNotificationService`.
+
 ## Правила локализации и настроек
 
 - Все пользовательские строки интерфейса должны храниться вне XAML и ViewModels.
@@ -138,18 +145,21 @@
 - Заголовок и текст нормализуются через `Trim`.
 - `EventRecord` обязан иметь временной диапазон, где `EndTime > StartTime`.
 - `TaskRecord` хранит признак завершения.
+- `TaskRecord` может хранить собственное nullable-время напоминания.
 
 ## Модель хранения и SQLite schema
 
 ### Выбранный вариант
 
-Для persistence-слоя используется одна таблица `calendar_records`.
+Для persistence-слоя используется таблица `calendar_records` и отдельная таблица `record_attachments`.
 
 Она хранит:
 
 - общие поля записи
 - тип записи
 - nullable-поля для особенностей `TaskRecord` и `EventRecord`
+- attachment-метаданные вынесены в отдельную таблицу, а сами файлы изображений хранятся в `%LocalAppData%\Taskloom\Media\Images`
+- attachment-метаданные вынесены в отдельную таблицу; изображения хранятся в `%LocalAppData%\Taskloom\Media\Images`, аудио — в `%LocalAppData%\Taskloom\Media\Audio`, обложки аудио — в `%LocalAppData%\Taskloom\Media\AudioCovers`
 
 ### Почему выбран этот вариант
 
@@ -162,7 +172,9 @@
 
 - `DaySummaryRecord` ограничен одной записью на дату через уникальный partial index.
 - Для `EventRecord` на уровне БД зафиксировано наличие `start_time` и `end_time`.
-- Для `TaskRecord` хранится `is_completed`.
+- Для `TaskRecord` хранятся `is_completed` и nullable `task_reminder_time`.
+- Изображения записи хранятся как несколько attachments типа `Image`; порядок отображения задаётся полем `sort_order`.
+- Аудиофайлы записи хранятся как несколько attachments типа `Audio`; для них в `record_attachments` сохраняются `display_title`, `duration_seconds`, `preview_relative_path` и общий `sort_order`.
 
 ## Persistence-слой
 
@@ -170,8 +182,14 @@
 
 - `SqliteConnectionFactory` открывает подключения к файлу SQLite.
 - `TaskloomPaths` определяет стандартный путь к локальной базе данных.
+- `TaskloomPaths` также определяет каталог `%LocalAppData%\Taskloom\Media\Images` для пользовательских изображений.
 - `SqliteDatabaseInitializer` применяет `CreateSchema.sql`.
-- `SqliteCalendarRecordRepository` выполняет CRUD и маппинг между `CalendarRecordDataModel` и доменными типами.
+- `SqliteCalendarRecordRepository` выполняет CRUD и маппинг между `CalendarRecordDataModel`, `RecordAttachmentDataModel` и доменными типами.
+- `RecordImageStorageService` импортирует `jpg/jpeg/png/bmp/gif`, возвращает метаданные attachment и удаляет локальные файлы при замене или удалении записи.
+- `RecordAudioStorageService` импортирует `mp3/wav/m4a/flac/wma/ogg`, читает title/duration/cover через `TagLibSharp` и сохраняет локальные аудиофайлы и обложки отдельно.
+- Presentation-слой пока использует grid layout миниатюр; горизонтальная drag-лента остаётся следующим отдельным UX-этапом.
+- Для описания записи используется presentation-only парсинг ссылок: исходный текст `Details` не меняется, а `TextBlock` рендерит `Run/Hyperlink` поверх исходной строки.
+- Для воспроизведения аудио используется единый `AudioPlaybackService` на базе WPF `MediaPlayer`; карточка записи показывает playlist по audio-attachments, а одновременно играет только один трек.
 
 ### Почему так
 
@@ -245,9 +263,11 @@
 - Type, info и status chips приведены к общей визуальной системе через общие ресурсы приложения и согласованные semantic palettes тем.
 - Карточка события показывает место, если оно заполнено, через presentation-модель `RecordListItemViewModel`.
 - `EventRecord` хранит статус события и время напоминания до начала события.
+- `TaskRecord` хранит отдельное nullable-время напоминания на дату задачи.
 - В редакторе события статус и напоминание выбираются через локализованные `ComboBox`.
+- В редакторе задачи напоминание включается отдельно и задаётся собственным временем, не связанным с event-only полями.
 - Напоминания MVP реализованы через `WindowsBalloonEventReminderService` и `NotifyIcon.ShowBalloonTip`, без добавления тяжёлой notification-инфраструктуры.
-- Транспорт локальных уведомлений вынесен в `IAppNotificationService`; текущая реализация `WindowsBalloonAppNotificationService` временная и должна быть заменена на Windows App SDK app notifications.
+- Транспорт локальных уведомлений вынесен в `IAppNotificationService`; основная реализация использует Windows App SDK `AppNotificationManager`, а `WindowsBalloonAppNotificationService` оставлен только как fallback.
 - Планировщик событий отправляет два разных уведомления: напоминание до события и уведомление о начале события.
 - Главное окно использует кастомную title bar область через `WindowChrome`, чтобы сохранить нативный resize/snap и убрать системный заголовок.
 - Вспомогательные окна также используют `WindowStyle=None` и кастомную title bar область; окно редактора сохраняет resize через `WindowChrome`, окно настроек остаётся фиксированного размера.
@@ -278,12 +298,13 @@
 - В WPF code-behind нельзя блокировать UI-поток через `GetAwaiter().GetResult()` для async-операций настроек или файлового ввода-вывода.
 - Новые поля события, требующие хранения, нужно добавлять только после явного решения по SQLite schema и миграциям.
 - Если потребуется полноценный modern toast, нужно заменить только реализацию `IEventReminderService`, сохранив домен и ViewModels.
-- Для Windows 11 нужно перейти на `AppNotificationManager` из Windows App SDK, чтобы уведомления попадали в центр уведомлений.
+- Для Windows 11 используется `AppNotificationManager` из Windows App SDK, чтобы уведомления попадали в центр уведомлений.
+- Поскольку Taskloom остаётся unpackaged WPF-приложением, Windows App Runtime 1.8 сейчас считается внешней зависимостью среды, а не частью дистрибутива приложения.
 - Tray mode должен быть отдельной инфраструктурной подсистемой жизненного цикла приложения, а не побочным эффектом сервиса напоминаний.
 - Tray mode реализован через `WindowsTrayService`; он владеет единственным `NotifyIcon`, context menu и временной иконкой приложения.
 - Balloon notification transport использует `NotifyIcon` из `WindowsTrayService`, чтобы не создавать вторую иконку в трее.
 - Закрытие главного окна пользователем скрывает приложение в трей; реальное завершение выполняется через пункт `Выход`.
-- Напоминания задач должны добавляться через явные поля domain/data/schema, а не переиспользовать event-only поля.
+- Напоминания задач добавлены через отдельное поле `task_reminder_time`; поле события `reminder_minutes_before` не переиспользуется для задач.
 - Новые вспомогательные окна должны использовать общий подход `WindowStyle=None` + `WindowChrome` + собственная title bar, а не возвращать стандартный системный заголовок.
 - Если вспомогательное окно содержит длинную форму, нужно задавать нормальный стартовый размер и ограничивать высоту рабочей областью экрана, а не открывать маленькое окно с критичными кнопками внутри скролла.
 - Если новое окно с `WindowStyle=None` поддерживает maximize, нужно подключить helper обработки `WM_GETMINMAXINFO`, иначе окно может развернуться под панель задач.

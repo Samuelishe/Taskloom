@@ -1475,3 +1475,227 @@
 
 - Taskloom должен оставаться активным в фоне для напоминаний, поэтому закрытие окна не должно автоматически завершать приложение.
 - Tray icon должен быть единым местом управления фоновым режимом и временными balloon-уведомлениями.
+
+## 2026-04-23 - Windows App SDK notifications
+
+### Что сделано
+
+- Подключён пакет `Microsoft.WindowsAppSDK`.
+- Target framework проекта уточнён до `net10.0-windows10.0.19041.0`.
+- Для unpackaged WPF-приложения добавлены `WindowsPackageType=None` и runtime identifiers.
+- Добавлен `WindowsAppSdkNotificationService` на базе `AppNotificationManager`.
+- Уведомления теперь отправляются через Windows App SDK и должны сохраняться в центре уведомлений Windows 11.
+- `WindowsBalloonAppNotificationService` оставлен как fallback, если Windows App SDK notifications недоступны в текущей среде.
+- Клик по уведомлению восстанавливает главное окно через существующий tray/open flow.
+- Сборка `dotnet build .\Taskloom.sln` через SDK 10 из Rider выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Taskloom.csproj`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Infrastructure/Notifications/WindowsAppSdkNotificationService.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Tray balloon был временной fallback-логикой и не закрывал задачу сохранения уведомлений в центре уведомлений Windows.
+- Транспорт уведомлений уже был вынесен за `IAppNotificationService`, поэтому замена реализации не потребовала изменений в домене, ViewModels или планировщике событий.
+
+## 2026-04-23 - Напоминания задач
+
+### Что сделано
+
+- В `TaskRecord` добавлено собственное nullable-время напоминания `ReminderTime`.
+- В `CalendarRecordDraft` и `CalendarRecordDataModel` добавлено отдельное поле времени напоминания задачи.
+- SQLite schema расширена колонкой `task_reminder_time`; инициализатор БД добавляет её и для существующей базы.
+- Репозиторий и прикладной сервис сохраняют и восстанавливают task reminder отдельно от event reminder.
+- Редактор записи получил включаемое время напоминания в блоке `Параметры задачи`.
+- Добавлены локализационные строки для UI и текста уведомления о задаче.
+- Планировщик уведомлений теперь проверяет pending-задачи с включённым временем напоминания и отправляет для них отдельное уведомление.
+- Сборка `dotnet build .\Taskloom.sln` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Domain/TaskRecord.cs`
+- `Taskloom/Services/Records/CalendarRecordDraft.cs`
+- `Taskloom/Data/Models/CalendarRecordDataModel.cs`
+- `Taskloom/Data/Sql/CreateSchema.sql`
+- `Taskloom/Infrastructure/Storage/SqliteDatabaseInitializer.cs`
+- `Taskloom/Infrastructure/Repositories/SqliteCalendarRecordRepository.cs`
+- `Taskloom/Services/Records/CalendarRecordService.cs`
+- `Taskloom/Services/Notifications/IEventReminderService.cs`
+- `Taskloom/Infrastructure/Notifications/WindowsBalloonEventReminderService.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- План проекта прямо требовал добавить task reminders через отдельные поля domain/data/schema/editor, а не переиспользовать event-only модель.
+- Для задачи без собственного времени события минимальная согласованная модель — отдельное nullable-время напоминания на дату задачи.
+
+## 2026-04-23 - Документирование внешних зависимостей запуска
+
+### Что сделано
+
+- В документации зафиксировано, что проект собирается под `net10.0-windows10.0.19041.0`.
+- Зафиксировано требование установленного .NET 10 Desktop Runtime для запуска приложения.
+- Зафиксировано требование Windows App Runtime 1.8 для Windows notifications через `AppNotificationManager`.
+- Отдельно отмечено, что при отсутствии или неполной установке Windows App Runtime приложение использует fallback-уведомления через tray balloon.
+- Зафиксировано, что текущий дистрибутив Taskloom не вшивает Windows App Runtime внутрь себя и рассматривает его как внешнюю зависимость среды.
+
+### Изменённые файлы
+
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Пользователь не должен выяснять требования запуска по журналу ошибок или из кода.
+- Для Windows App SDK notifications критично явно фиксировать внешние runtime-зависимости, иначе воспроизводимость установки и запуска остаётся непредсказуемой.
+
+## 2026-04-23 - Multiple images для записей
+
+### Что сделано
+
+- Для всех типов записей добавлена загрузка нескольких изображений через `Обзор` в редакторе.
+- В domain добавлены `RecordAttachment` и `RecordAttachmentKind`; запись теперь может содержать attachments как часть агрегата.
+- В SQLite schema используется отдельная таблица `record_attachments`; для порядка изображений добавлено поле `sort_order`.
+- Добавлено локальное файловое хранилище `RecordImageStorageService`, которое копирует `jpg/jpeg/png/bmp/gif` в `%LocalAppData%\Taskloom\Media\Images`.
+- В редакторе записи показывается grid миниатюр; изображения можно удалять и переставлять влево/вправо.
+- В карточке записи на главном экране показывается grid миниатюр до четырёх изображений; конкретная миниатюра открывает свой файл системным просмотрщиком через shell.
+- При удалении или замене состава вложений локальные лишние файлы удаляются после успешного сохранения; при удалении записи удаляются все локальные файлы записи.
+- Сборка `dotnet build .\Taskloom.sln` через SDK 10 выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Domain/CalendarRecord.cs`
+- `Taskloom/Domain/RecordAttachment.cs`
+- `Taskloom/Domain/RecordAttachmentKind.cs`
+- `Taskloom/Services/Records/CalendarRecordDraft.cs`
+- `Taskloom/Services/Records/RecordImageDraft.cs`
+- `Taskloom/Services/Records/IRecordImageStorageService.cs`
+- `Taskloom/Services/Records/CalendarRecordService.cs`
+- `Taskloom/Data/Models/RecordAttachmentDataModel.cs`
+- `Taskloom/Data/Sql/CreateSchema.sql`
+- `Taskloom/Infrastructure/Storage/TaskloomPaths.cs`
+- `Taskloom/Infrastructure/Storage/RecordImageStorageService.cs`
+- `Taskloom/Infrastructure/Storage/SqliteDatabaseInitializer.cs`
+- `Taskloom/Infrastructure/Repositories/SqliteCalendarRecordRepository.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordImageListItemViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml.cs`
+- `Taskloom/Common/Converters/ImagePathToBitmapConverter.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Хранить только внешний путь к пользовательскому файлу нельзя: вложение станет невалидным при переносе или удалении исходника.
+- Отдельная таблица attachments с `sort_order` лучше масштабируется, чем nullable image-поля внутри `calendar_records`, и позволяет дойти до `strip mode` без переделки storage-модели.
+
+## 2026-04-23 - Кликабельные ссылки в описании записи
+
+### Что сделано
+
+- Добавлен `LinkParser`, который разбивает текст описания на обычные фрагменты и ссылки.
+- Поддержаны URI со схемой (`http`, `https`, `ftp`, `tg`, `mailto`, `file` и другие схемы), домены без схемы, email и IPv4-адреса.
+- Для доменов без схемы используется `https://`, для IPv4 без схемы — `http://`, для email — `mailto:`.
+- Добавлен `TextBlockLinkBehavior`, который рендерит `Run/Hyperlink` поверх исходного текста `Details`.
+- Открытие ссылки идёт через системный обработчик `Process.Start(..., UseShellExecute = true)`.
+- Исходный текст записи не меняется и продолжает храниться в `Details` без нормализации или перезаписи.
+- Сборка `dotnet build .\Taskloom.sln` через SDK 10 выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Common/Text/LinkToken.cs`
+- `Taskloom/Common/Text/LinkParser.cs`
+- `Taskloom/Common/Text/TextBlockLinkBehavior.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Ссылки должны быть presentation-поведением, а не трансформацией данных: запись хранит исходный текст как есть.
+- Attached behavior для `TextBlock` даёт минимально инвазивный способ включить кликабельные ссылки без перехода на rich text editor или markup-хранение.
+
+## 2026-04-23 - Audio attachments и playlist в карточке записи
+
+### Что сделано
+
+- Для `record_attachments` добавлены audio-метаданные: `display_title`, `duration_seconds`, `preview_relative_path`.
+- Добавлен `RecordAudioStorageService`, который импортирует `mp3/wav/m4a/flac/wma/ogg`, читает title/duration/cover через `TagLibSharp` и сохраняет файлы в `%LocalAppData%\Taskloom\Media\Audio` и `%LocalAppData%\Taskloom\Media\AudioCovers`.
+- `CalendarRecordService` расширен поддержкой нескольких audio attachments на запись, включая очистку удалённых локальных файлов и обложек.
+- Редактор записи умеет добавлять несколько аудиофайлов, показывает title, имя файла, длительность, обложку и позволяет менять порядок треков.
+- Главное окно показывает playlist прямо в карточке записи: cover, play/pause, seek, длительность и отдельное открытие аудиофайла через shell.
+- Для воспроизведения добавлен единый `AudioPlaybackService` на базе WPF `MediaPlayer`; одновременно воспроизводится только один трек.
+- Сборка `dotnet build .\Taskloom.sln` через SDK 10 выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Taskloom.csproj`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Common/Converters/AudioCoverSourceToBitmapConverter.cs`
+- `Taskloom/Data/Models/RecordAttachmentDataModel.cs`
+- `Taskloom/Data/Sql/CreateSchema.sql`
+- `Taskloom/Domain/CalendarRecord.cs`
+- `Taskloom/Domain/RecordAttachment.cs`
+- `Taskloom/Domain/RecordAttachmentKind.cs`
+- `Taskloom/Infrastructure/Media/AudioPlaybackService.cs`
+- `Taskloom/Infrastructure/Repositories/SqliteCalendarRecordRepository.cs`
+- `Taskloom/Infrastructure/Storage/RecordAudioStorageService.cs`
+- `Taskloom/Infrastructure/Storage/SqliteDatabaseInitializer.cs`
+- `Taskloom/Infrastructure/Storage/TaskloomPaths.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordAudioListItemViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml`
+- `Taskloom/Presentation/Views/RecordEditorWindow.xaml.cs`
+- `Taskloom/Services/Media/AudioPlaybackStateChangedEventArgs.cs`
+- `Taskloom/Services/Media/IAudioPlaybackService.cs`
+- `Taskloom/Services/Records/CalendarRecordDraft.cs`
+- `Taskloom/Services/Records/CalendarRecordService.cs`
+- `Taskloom/Services/Records/IRecordAudioStorageService.cs`
+- `Taskloom/Services/Records/RecordAudioDraft.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Audio playlist лучше строить поверх уже существующей attachment-модели, чем заводить отдельную сущность только для музыки.
+- Единый playback service нужен, чтобы карточки записей не запускали несколько конкурирующих плееров одновременно.
+- Метаданные аудио нужно читать при импорте и сохранять рядом с attachment, иначе список записей начнёт лезть в файлы при каждом открытии дня.

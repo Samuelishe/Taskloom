@@ -1,12 +1,14 @@
 using Taskloom.Domain;
 using Taskloom.Services.Localization;
+using Taskloom.Services.Media;
+using Taskloom.Services.Records;
 
 namespace Taskloom.Presentation.ViewModels;
 
 /// <summary>
 /// Модель элемента списка записей выбранной даты.
 /// </summary>
-public sealed class RecordListItemViewModel
+public sealed class RecordListItemViewModel : IDisposable
 {
     private RecordListItemViewModel(
         Guid id,
@@ -16,6 +18,8 @@ public sealed class RecordListItemViewModel
         string? details,
         string timeDisplay,
         bool isCompleted,
+        IReadOnlyList<RecordImageListItemViewModel>? images = null,
+        IReadOnlyList<RecordAudioListItemViewModel>? audios = null,
         string? locationDisplay = null,
         EventStatus? eventStatus = null,
         string? eventStatusText = null,
@@ -29,6 +33,9 @@ public sealed class RecordListItemViewModel
         Details = details;
         TimeDisplay = timeDisplay;
         IsCompleted = isCompleted;
+        Images = images ?? [];
+        Audios = audios ?? [];
+        VisibleImages = Images.Take(9).ToArray();
         LocationDisplay = locationDisplay;
         EventStatus = eventStatus;
         EventStatusText = eventStatusText;
@@ -56,6 +63,50 @@ public sealed class RecordListItemViewModel
 
     public bool HasLocation => !string.IsNullOrWhiteSpace(LocationDisplay);
 
+    public bool HasImages => Images.Count > 0;
+
+    public bool HasAudios => Audios.Count > 0;
+
+    public bool HasSingleImage => Images.Count == 1;
+
+    public bool HasTwoImages => Images.Count == 2;
+
+    public bool HasThreeImages => Images.Count == 3;
+
+    public bool HasFourToSixImages => Images.Count is >= 4 and <= 6;
+
+    public bool HasSevenOrMoreImages => Images.Count >= 7;
+
+    public IReadOnlyList<RecordImageListItemViewModel> Images { get; }
+
+    public IReadOnlyList<RecordAudioListItemViewModel> Audios { get; }
+
+    public IReadOnlyList<RecordImageListItemViewModel> VisibleImages { get; }
+
+    public int ImageCount => Images.Count;
+
+    public RecordImageListItemViewModel? FirstImage => VisibleImages.ElementAtOrDefault(0);
+
+    public RecordImageListItemViewModel? SecondImage => VisibleImages.ElementAtOrDefault(1);
+
+    public RecordImageListItemViewModel? ThirdImage => VisibleImages.ElementAtOrDefault(2);
+
+    public RecordImageListItemViewModel? FourthImage => VisibleImages.ElementAtOrDefault(3);
+
+    public RecordImageListItemViewModel? FifthImage => VisibleImages.ElementAtOrDefault(4);
+
+    public RecordImageListItemViewModel? SixthImage => VisibleImages.ElementAtOrDefault(5);
+
+    public RecordImageListItemViewModel? SeventhImage => VisibleImages.ElementAtOrDefault(6);
+
+    public RecordImageListItemViewModel? EighthImage => VisibleImages.ElementAtOrDefault(7);
+
+    public RecordImageListItemViewModel? NinthImage => VisibleImages.ElementAtOrDefault(8);
+
+    public int AdditionalImageCount => Math.Max(0, Images.Count - VisibleImages.Count);
+
+    public bool HasAdditionalImages => AdditionalImageCount > 0;
+
     public string? LocationDisplay { get; }
 
     public EventStatus? EventStatus { get; }
@@ -66,13 +117,49 @@ public sealed class RecordListItemViewModel
 
     public string? TaskStatusIcon { get; }
 
+    public void Dispose()
+    {
+        foreach (var audio in Audios)
+        {
+            audio.Dispose();
+        }
+    }
+
     /// <summary>
     /// Создаёт presentation-модель элемента списка из доменной записи.
     /// </summary>
-    public static RecordListItemViewModel Create(CalendarRecord record, ILocalizationService localizationService)
+    public static RecordListItemViewModel Create(
+        CalendarRecord record,
+        ILocalizationService localizationService,
+        IRecordImageStorageService imageStorageService,
+        IRecordAudioStorageService audioStorageService,
+        IAudioPlaybackService audioPlaybackService)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(localizationService);
+        ArgumentNullException.ThrowIfNull(imageStorageService);
+        ArgumentNullException.ThrowIfNull(audioStorageService);
+        ArgumentNullException.ThrowIfNull(audioPlaybackService);
+
+        var images = record.ImageAttachments
+            .Select(attachment => new RecordImageListItemViewModel(
+                imageStorageService.GetAbsolutePath(attachment.RelativePath) ?? string.Empty,
+                attachment.OriginalFileName))
+            .Where(static item => !string.IsNullOrWhiteSpace(item.Path))
+            .ToArray();
+
+        var audios = record.AudioAttachments
+            .Select(attachment => new RecordAudioListItemViewModel(
+                audioStorageService.GetAbsolutePath(attachment.RelativePath) ?? string.Empty,
+                attachment.OriginalFileName,
+                string.IsNullOrWhiteSpace(attachment.DisplayTitle)
+                    ? attachment.OriginalFileName
+                    : attachment.DisplayTitle,
+                audioStorageService.GetAbsolutePath(attachment.PreviewRelativePath),
+                attachment.DurationSeconds,
+                audioPlaybackService))
+            .Where(static item => !string.IsNullOrWhiteSpace(item.Path))
+            .ToArray();
 
         return record switch
         {
@@ -84,6 +171,8 @@ public sealed class RecordListItemViewModel
                 taskRecord.Details,
                 localizationService.GetString("RecordList.TaskLabel"),
                 taskRecord.IsCompleted,
+                images,
+                audios,
                 null,
                 null,
                 null,
@@ -99,7 +188,9 @@ public sealed class RecordListItemViewModel
                 noteRecord.Title,
                 noteRecord.Details,
                 localizationService.GetString("RecordList.NoteAnyTime"),
-                false),
+                false,
+                images,
+                audios),
 
             EventRecord eventRecord => new RecordListItemViewModel(
                 eventRecord.Id,
@@ -109,6 +200,8 @@ public sealed class RecordListItemViewModel
                 eventRecord.Details,
                 $"{eventRecord.StartTime:HH\\:mm} - {eventRecord.EndTime:HH\\:mm}",
                 false,
+                images,
+                audios,
                 string.IsNullOrWhiteSpace(eventRecord.Location)
                     ? null
                     : localizationService.Format("RecordList.EventLocation", eventRecord.Location),
@@ -122,7 +215,9 @@ public sealed class RecordListItemViewModel
                 summaryRecord.Title,
                 summaryRecord.Details,
                 localizationService.GetString("RecordList.DaySummaryLabel"),
-                false),
+                false,
+                images,
+                audios),
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {record.GetType().Name}.")
         };

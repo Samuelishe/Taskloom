@@ -5,6 +5,8 @@ namespace Taskloom.Domain;
 /// </summary>
 public abstract class CalendarRecord
 {
+    private List<RecordAttachment> _attachments = [];
+
     protected CalendarRecord(Guid id, RecordType type, DateOnly date, string title, string? details)
     {
         Id = id == Guid.Empty ? Guid.NewGuid() : id;
@@ -24,6 +26,22 @@ public abstract class CalendarRecord
 
     public string? Details { get; private set; }
 
+    public IReadOnlyList<RecordAttachment> Attachments => _attachments;
+
+    public RecordAttachment? PrimaryImageAttachment => _attachments.FirstOrDefault(static attachment => attachment.Kind == RecordAttachmentKind.Image);
+
+    public IReadOnlyList<RecordAttachment> ImageAttachments => _attachments
+        .Where(static attachment => attachment.Kind == RecordAttachmentKind.Image)
+        .OrderBy(static attachment => attachment.SortOrder)
+        .ThenBy(static attachment => attachment.CreatedUtc)
+        .ToArray();
+
+    public IReadOnlyList<RecordAttachment> AudioAttachments => _attachments
+        .Where(static attachment => attachment.Kind == RecordAttachmentKind.Audio)
+        .OrderBy(static attachment => attachment.SortOrder)
+        .ThenBy(static attachment => attachment.CreatedUtc)
+        .ToArray();
+
     public void Reschedule(DateOnly date)
     {
         Date = date;
@@ -37,6 +55,27 @@ public abstract class CalendarRecord
     public void ChangeDetails(string? details)
     {
         Details = NormalizeOptionalText(details, 4000);
+    }
+
+    public void ReplaceAttachments(IEnumerable<RecordAttachment>? attachments)
+    {
+        if (attachments is null)
+        {
+            _attachments = [];
+            return;
+        }
+
+        var normalizedAttachments = attachments.ToList();
+
+        if (normalizedAttachments.Any(attachment => attachment.RecordId != Id))
+        {
+            throw new InvalidOperationException("Вложение должно принадлежать той же записи, что и агрегат.");
+        }
+
+        _attachments = normalizedAttachments
+            .OrderBy(static attachment => attachment.SortOrder)
+            .ThenBy(static attachment => attachment.CreatedUtc)
+            .ToList();
     }
 
     protected static string NormalizeRequiredText(string value, string paramName, int maxLength)

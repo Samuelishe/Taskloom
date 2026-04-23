@@ -36,6 +36,11 @@ public sealed class CalendarRecordDataModel
     public bool? IsCompleted { get; set; }
 
     /// <summary>
+    /// Время напоминания о задаче в формате HH:mm.
+    /// </summary>
+    public string? TaskReminderTime { get; set; }
+
+    /// <summary>
     /// Время начала события в формате HH:mm.
     /// </summary>
     public string? StartTime { get; set; }

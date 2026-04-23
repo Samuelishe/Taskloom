@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:Taskloom.Common.Converters"
         xmlns:markup="clr-namespace:Taskloom.Common.Markup"
         mc:Ignorable="d"
         Title="{Binding EditorTitle}"
@@ -29,6 +30,9 @@
         Padding="1"
         Background="{DynamicResource App.BorderStrongBrush}">
         <Grid Background="{DynamicResource App.SurfacePrimaryBrush}">
+            <Grid.Resources>
+                <converters:ImagePathToBitmapConverter x:Key="ImagePathToBitmapConverter" />
+            </Grid.Resources>
             <Grid.RowDefinitions>
                 <RowDefinition Height="48" />
                 <RowDefinition Height="*" />
@@ -63,6 +67,8 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <Grid Margin="24">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -109,6 +115,238 @@
             </StackPanel>
 
             <Border Grid.Row="4" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+                <StackPanel>
+                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Images}" />
+                    <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
+                        <Button
+                            MinWidth="120"
+                            Style="{StaticResource SecondaryActionButtonStyle}"
+                            Click="BrowseImagesButton_OnClick"
+                            Content="{markup:Loc Editor.AttachImages}" />
+                    </WrapPanel>
+
+                    <TextBlock
+                        Margin="0,10,0,0"
+                        Foreground="{DynamicResource App.TextMutedBrush}"
+                        Text="{markup:Loc Editor.NoImages}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasImages}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding Images}">
+                        <ItemsControl.Style>
+                            <Style TargetType="ItemsControl">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasImages}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ItemsControl.Style>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Width="168"
+                                    Margin="0,0,12,12"
+                                    Background="{DynamicResource App.SurfacePrimaryBrush}"
+                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="8">
+                                    <StackPanel>
+                                        <Border
+                                            BorderBrush="{DynamicResource App.BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Height="120"
+                                            Padding="6">
+                                            <Image
+                                                Stretch="Uniform"
+                                                Source="{Binding PreviewPath, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=240}" />
+                                        </Border>
+
+                                        <TextBlock
+                                            Margin="0,8,0,0"
+                                            Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                            Text="{Binding DisplayName}"
+                                            TextTrimming="CharacterEllipsis"
+                                            TextWrapping="Wrap" />
+
+                                        <WrapPanel Margin="0,8,0,0">
+                                            <Button
+                                                Width="36"
+                                                Height="30"
+                                                Click="MoveImageLeftButton_OnClick"
+                                                Content="←"
+                                                Tag="{Binding}"
+                                                ToolTip="{markup:Loc Editor.MoveImageLeft}"
+                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                            <Button
+                                                Width="36"
+                                                Height="30"
+                                                Margin="6,0,0,0"
+                                                Click="MoveImageRightButton_OnClick"
+                                                Content="→"
+                                                Tag="{Binding}"
+                                                ToolTip="{markup:Loc Editor.MoveImageRight}"
+                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                            <Button
+                                                Width="36"
+                                                Height="30"
+                                                Margin="6,0,0,0"
+                                                Click="RemoveImageButton_OnClick"
+                                                Content="✕"
+                                                Tag="{Binding}"
+                                                ToolTip="{markup:Loc Editor.RemoveImage}"
+                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="5" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+                <StackPanel>
+                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Audio}" />
+                    <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
+                        <Button
+                            MinWidth="120"
+                            Style="{StaticResource SecondaryActionButtonStyle}"
+                            Click="BrowseAudiosButton_OnClick"
+                            Content="{markup:Loc Editor.AttachAudio}" />
+                    </WrapPanel>
+
+                    <TextBlock
+                        Margin="0,10,0,0"
+                        Foreground="{DynamicResource App.TextMutedBrush}"
+                        Text="{markup:Loc Editor.NoAudio}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasAudios}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding Audios}">
+                        <ItemsControl.Style>
+                            <Style TargetType="ItemsControl">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasAudios}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ItemsControl.Style>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,12"
+                                    Background="{DynamicResource App.SurfacePrimaryBrush}"
+                                    BorderBrush="{DynamicResource App.BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="68" />
+                                            <ColumnDefinition Width="12" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border
+                                            Width="68"
+                                            Height="68"
+                                            Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                                            BorderBrush="{DynamicResource App.BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="0">
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                FontFamily="Segoe UI Symbol"
+                                                FontSize="18"
+                                                Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                Text="♪" />
+                                        </Border>
+
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                                Text="{Binding DisplayName}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                Margin="0,4,0,0"
+                                                Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                Text="{Binding OriginalFileName}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                Margin="0,4,0,0"
+                                                Foreground="{DynamicResource App.TextMutedBrush}"
+                                                Text="{Binding DurationSeconds, StringFormat={}{0:F0} s}" />
+                                        </StackPanel>
+
+                                        <WrapPanel Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <Button
+                                                Width="36"
+                                                Height="30"
+                                                Click="MoveAudioLeftButton_OnClick"
+                                                Content="←"
+                                                Tag="{Binding}"
+                                                ToolTip="{markup:Loc Editor.MoveAudioLeft}"
+                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                            <Button
+                                                Width="36"
+                                                Height="30"
+                                                Margin="6,0,0,0"
+                                                Click="MoveAudioRightButton_OnClick"
+                                                Content="→"
+                                                Tag="{Binding}"
+                                                ToolTip="{markup:Loc Editor.MoveAudioRight}"
+                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                            <Button
+                                                Width="36"
+                                                Height="30"
+                                                Margin="6,0,0,0"
+                                                Click="RemoveAudioButton_OnClick"
+                                                Content="✕"
+                                                Tag="{Binding}"
+                                                ToolTip="{markup:Loc Editor.RemoveAudio}"
+                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                        </WrapPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="6" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -126,10 +364,56 @@
                         Content="{markup:Loc Editor.Completed}"
                         Foreground="{DynamicResource App.TextPrimaryBrush}"
                         IsChecked="{Binding IsCompleted, Mode=TwoWay}" />
+                    <CheckBox
+                        Margin="0,8,0,0"
+                        Content="{markup:Loc Editor.TaskReminderEnabled}"
+                        Foreground="{DynamicResource App.TextPrimaryBrush}"
+                        IsChecked="{Binding HasTaskReminder, Mode=TwoWay}" />
+                    <StackPanel Margin="0,10,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasTaskReminder}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.TaskReminderTime}" />
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox
+                                Grid.Column="0"
+                                ItemsSource="{Binding HourOptions}"
+                                DisplayMemberPath="Title"
+                                SelectedValuePath="Value"
+                                SelectedValue="{Binding SelectedTaskReminderHour, Mode=TwoWay}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Margin="6,0"
+                                VerticalAlignment="Center"
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                Text=":" />
+                            <ComboBox
+                                Grid.Column="2"
+                                ItemsSource="{Binding MinuteSecondOptions}"
+                                DisplayMemberPath="Title"
+                                SelectedValuePath="Value"
+                                SelectedValue="{Binding SelectedTaskReminderMinute, Mode=TwoWay}" />
+                        </Grid>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="5" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+            <Border Grid.Row="7" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed" />

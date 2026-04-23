@@ -30,6 +30,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                title AS Title,
                                details AS Details,
                                is_completed AS IsCompleted,
+                               task_reminder_time AS TaskReminderTime,
                                start_time AS StartTime,
                                end_time AS EndTime,
                                location AS Location,
@@ -42,8 +43,15 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         var command = new CommandDefinition(sql, new { Id = id.ToString("D") }, cancellationToken: cancellationToken);
         var dataModel = await connection.QuerySingleOrDefaultAsync<CalendarRecordDataModel>(command);
+        if (dataModel is null)
+        {
+            return null;
+        }
 
-        return dataModel is null ? null : MapToDomain(dataModel);
+        var record = MapToDomain(dataModel);
+        var attachmentsByRecordId = await LoadAttachmentsAsync(connection, [record.Id], cancellationToken);
+        AttachAttachments([record], attachmentsByRecordId);
+        return record;
     }
 
     /// <inheritdoc />
@@ -60,6 +68,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                title AS Title,
                                details AS Details,
                                is_completed AS IsCompleted,
+                               task_reminder_time AS TaskReminderTime,
                                start_time AS StartTime,
                                end_time AS EndTime,
                                location AS Location,
@@ -84,8 +93,11 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
             },
             cancellationToken: cancellationToken);
 
-        var dataModels = await connection.QueryAsync<CalendarRecordDataModel>(command);
-        return dataModels.Select(MapToDomain).ToArray();
+        var dataModels = (await connection.QueryAsync<CalendarRecordDataModel>(command)).ToArray();
+        var records = dataModels.Select(MapToDomain).ToArray();
+        var attachmentsByRecordId = await LoadAttachmentsAsync(connection, records.Select(record => record.Id), cancellationToken);
+        AttachAttachments(records, attachmentsByRecordId);
+        return records;
     }
 
     /// <inheritdoc />
@@ -102,6 +114,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                title,
                                details,
                                is_completed,
+                               task_reminder_time,
                                start_time,
                                end_time,
                                location,
@@ -116,6 +129,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                @Title,
                                @Details,
                                @IsCompleted,
+                               @TaskReminderTime,
                                @StartTime,
                                @EndTime,
                                @Location,
@@ -128,6 +142,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                title = excluded.title,
                                details = excluded.details,
                                is_completed = excluded.is_completed,
+                               task_reminder_time = excluded.task_reminder_time,
                                start_time = excluded.start_time,
                                end_time = excluded.end_time,
                                location = excluded.location,
@@ -138,21 +153,93 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
         var dataModel = MapToDataModel(record);
 
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
-        var command = new CommandDefinition(sql, dataModel, cancellationToken: cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        var command = new CommandDefinition(sql, dataModel, transaction, cancellationToken: cancellationToken);
         await connection.ExecuteAsync(command);
+
+        const string deleteAttachmentsSql = """
+                                            DELETE FROM record_attachments
+                                            WHERE record_id = @RecordId;
+                                            """;
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                deleteAttachmentsSql,
+                new { RecordId = record.Id.ToString("D") },
+                transaction,
+                cancellationToken: cancellationToken));
+
+        if (record.Attachments.Count > 0)
+        {
+            const string insertAttachmentSql = """
+                                               INSERT INTO record_attachments
+                                               (
+                                                   id,
+                                                   record_id,
+                                                   kind_id,
+                                                   original_file_name,
+                                                   stored_file_name,
+                                                   relative_path,
+                                                   content_type,
+                                                   file_size,
+                                                   created_utc,
+                                                   sort_order,
+                                                   display_title,
+                                                   duration_seconds,
+                                                   preview_relative_path
+                                               )
+                                               VALUES
+                                               (
+                                                   @Id,
+                                                   @RecordId,
+                                                   @KindId,
+                                                   @OriginalFileName,
+                                                   @StoredFileName,
+                                                   @RelativePath,
+                                                   @ContentType,
+                                                   @FileSize,
+                                                   @CreatedUtc,
+                                                   @SortOrder,
+                                                   @DisplayTitle,
+                                                   @DurationSeconds,
+                                                   @PreviewRelativePath
+                                               );
+                                               """;
+
+            var attachmentDataModels = record.Attachments
+                .Select(MapAttachmentToDataModel)
+                .ToArray();
+
+            await connection.ExecuteAsync(
+                new CommandDefinition(
+                    insertAttachmentSql,
+                    attachmentDataModels,
+                    transaction,
+                    cancellationToken: cancellationToken));
+        }
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        const string sql = """
-                           DELETE FROM calendar_records
-                           WHERE id = @Id;
-                           """;
+        const string deleteAttachmentsSql = """
+                                            DELETE FROM record_attachments
+                                            WHERE record_id = @Id;
+                                            """;
+
+        const string deleteRecordSql = """
+                                       DELETE FROM calendar_records
+                                       WHERE id = @Id;
+                                       """;
 
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
-        var command = new CommandDefinition(sql, new { Id = id.ToString("D") }, cancellationToken: cancellationToken);
-        await connection.ExecuteAsync(command);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        var parameters = new { Id = id.ToString("D") };
+        await connection.ExecuteAsync(new CommandDefinition(deleteAttachmentsSql, parameters, transaction, cancellationToken: cancellationToken));
+        await connection.ExecuteAsync(new CommandDefinition(deleteRecordSql, parameters, transaction, cancellationToken: cancellationToken));
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private static CalendarRecord MapToDomain(CalendarRecordDataModel dataModel)
@@ -168,7 +255,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 date,
                 dataModel.Title,
                 dataModel.Details,
-                dataModel.IsCompleted ?? false),
+                dataModel.IsCompleted ?? false,
+                ParseOptionalTime(dataModel.TaskReminderTime)),
 
             RecordType.Note => new NoteRecord(
                 id,
@@ -212,6 +300,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
         {
             case TaskRecord taskRecord:
                 dataModel.IsCompleted = taskRecord.IsCompleted;
+                dataModel.TaskReminderTime = taskRecord.ReminderTime?.ToString("HH:mm");
                 break;
 
             case EventRecord eventRecord:
@@ -226,6 +315,103 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
         return dataModel;
     }
 
+    private static RecordAttachmentDataModel MapAttachmentToDataModel(RecordAttachment attachment)
+    {
+        return new RecordAttachmentDataModel
+        {
+            Id = attachment.Id.ToString("D"),
+            RecordId = attachment.RecordId.ToString("D"),
+            KindId = (int)attachment.Kind,
+            OriginalFileName = attachment.OriginalFileName,
+            StoredFileName = attachment.StoredFileName,
+            RelativePath = attachment.RelativePath,
+            ContentType = attachment.ContentType,
+            FileSize = attachment.FileSize,
+            CreatedUtc = attachment.CreatedUtc.ToString("O"),
+            SortOrder = attachment.SortOrder,
+            DisplayTitle = attachment.DisplayTitle,
+            DurationSeconds = attachment.DurationSeconds,
+            PreviewRelativePath = attachment.PreviewRelativePath
+        };
+    }
+
+    private static RecordAttachment MapAttachmentToDomain(RecordAttachmentDataModel dataModel)
+    {
+        return new RecordAttachment(
+            Guid.Parse(dataModel.Id),
+            Guid.Parse(dataModel.RecordId),
+            (RecordAttachmentKind)dataModel.KindId,
+            dataModel.OriginalFileName,
+            dataModel.StoredFileName,
+            dataModel.RelativePath,
+            dataModel.ContentType,
+            dataModel.FileSize,
+            DateTime.Parse(dataModel.CreatedUtc, null, System.Globalization.DateTimeStyles.RoundtripKind),
+            dataModel.SortOrder,
+            dataModel.DisplayTitle,
+            dataModel.DurationSeconds,
+            dataModel.PreviewRelativePath);
+    }
+
+    private static void AttachAttachments(
+        IEnumerable<CalendarRecord> records,
+        IReadOnlyDictionary<Guid, IReadOnlyList<RecordAttachment>> attachmentsByRecordId)
+    {
+        foreach (var record in records)
+        {
+            record.ReplaceAttachments(
+                attachmentsByRecordId.TryGetValue(record.Id, out var attachments)
+                    ? attachments
+                    : []);
+        }
+    }
+
+    private static async Task<IReadOnlyDictionary<Guid, IReadOnlyList<RecordAttachment>>> LoadAttachmentsAsync(
+        System.Data.IDbConnection connection,
+        IEnumerable<Guid> recordIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = recordIds
+            .Distinct()
+            .Select(id => id.ToString("D"))
+            .ToArray();
+
+        if (ids.Length == 0)
+        {
+            return new Dictionary<Guid, IReadOnlyList<RecordAttachment>>();
+        }
+
+        const string sql = """
+                           SELECT
+                               id AS Id,
+                               record_id AS RecordId,
+                               kind_id AS KindId,
+                               original_file_name AS OriginalFileName,
+                               stored_file_name AS StoredFileName,
+                               relative_path AS RelativePath,
+                               content_type AS ContentType,
+                               file_size AS FileSize,
+                               created_utc AS CreatedUtc,
+                               sort_order AS SortOrder,
+                               display_title AS DisplayTitle,
+                               duration_seconds AS DurationSeconds,
+                               preview_relative_path AS PreviewRelativePath
+                           FROM record_attachments
+                           WHERE record_id IN @RecordIds
+                           ORDER BY sort_order, created_utc;
+                           """;
+
+        var command = new CommandDefinition(sql, new { RecordIds = ids }, cancellationToken: cancellationToken);
+        var dataModels = await connection.QueryAsync<RecordAttachmentDataModel>(command);
+
+        return dataModels
+            .Select(MapAttachmentToDomain)
+            .GroupBy(attachment => attachment.RecordId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<RecordAttachment>)group.ToArray());
+    }
+
     private static TimeOnly ParseRequiredTime(string? value, string propertyName)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -234,5 +420,12 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
         }
 
         return TimeOnly.ParseExact(value, "HH:mm");
+    }
+
+    private static TimeOnly? ParseOptionalTime(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : TimeOnly.ParseExact(value, "HH:mm");
     }
 }

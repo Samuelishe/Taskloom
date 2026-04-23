@@ -1,0 +1,169 @@
+using System.IO;
+using TagLib;
+using Taskloom.Domain;
+using Taskloom.Services.Records;
+
+namespace Taskloom.Infrastructure.Storage;
+
+/// <summary>
+/// Хранит прикреплённые аудиофайлы и их обложки в локальном профиле пользователя.
+/// </summary>
+public sealed class RecordAudioStorageService : IRecordAudioStorageService
+{
+    private static readonly Dictionary<string, string> ContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".mp3"] = "audio/mpeg",
+        [".wav"] = "audio/wav",
+        [".m4a"] = "audio/mp4",
+        [".flac"] = "audio/flac",
+        [".wma"] = "audio/x-ms-wma",
+        [".ogg"] = "audio/ogg"
+    };
+
+    public Task<RecordAudioDraft> PrepareAudioDraftAsync(
+        string sourceFilePath,
+        int sortOrder,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceFilePath);
+
+        if (!System.IO.File.Exists(sourceFilePath))
+        {
+            throw new FileNotFoundException("Не найден аудиофайл.", sourceFilePath);
+        }
+
+        var extension = Path.GetExtension(sourceFilePath);
+
+        if (!ContentTypes.TryGetValue(extension, out var contentType))
+        {
+            throw new InvalidOperationException("Поддерживаются только аудиофайлы MP3, WAV, M4A, FLAC, WMA и OGG.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var fileInfo = new FileInfo(sourceFilePath);
+        string title = fileInfo.Name;
+        double? durationSeconds = null;
+        byte[]? coverBytes = null;
+
+        try
+        {
+            using var tagFile = TagLib.File.Create(sourceFilePath);
+            title = string.IsNullOrWhiteSpace(tagFile.Tag?.Title)
+                ? fileInfo.Name
+                : tagFile.Tag.Title.Trim();
+            coverBytes = tagFile.Tag?.Pictures?.FirstOrDefault()?.Data?.Data;
+            durationSeconds = tagFile.Properties?.Duration.TotalSeconds > 0
+                ? tagFile.Properties.Duration.TotalSeconds
+                : null;
+        }
+        catch
+        {
+            // Если метаданные не удалось прочитать, импорт всё равно должен продолжиться.
+        }
+
+        return Task.FromResult(new RecordAudioDraft
+        {
+            OriginalFileName = fileInfo.Name,
+            SourceFilePath = sourceFilePath,
+            ContentType = contentType,
+            FileSize = fileInfo.Length,
+            SortOrder = sortOrder,
+            DisplayTitle = title,
+            DurationSeconds = durationSeconds,
+            CoverBytes = coverBytes
+        });
+    }
+
+    public async Task<RecordAttachment> ImportAudioAsync(
+        Guid recordId,
+        RecordAudioDraft draft,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+
+        if (string.IsNullOrWhiteSpace(draft.SourceFilePath))
+        {
+            throw new InvalidOperationException("Для импорта аудиофайла нужен исходный путь.");
+        }
+
+        var sourceFilePath = draft.SourceFilePath;
+
+        if (!System.IO.File.Exists(sourceFilePath))
+        {
+            throw new FileNotFoundException("Не найден аудиофайл.", sourceFilePath);
+        }
+
+        var extension = Path.GetExtension(sourceFilePath);
+
+        if (!ContentTypes.TryGetValue(extension, out var contentType))
+        {
+            throw new InvalidOperationException("Поддерживаются только аудиофайлы MP3, WAV, M4A, FLAC, WMA и OGG.");
+        }
+
+        var audioDirectory = TaskloomPaths.GetAudioDirectoryPath();
+        Directory.CreateDirectory(audioDirectory);
+
+        var storedFileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var targetPath = Path.Combine(audioDirectory, storedFileName);
+
+        await using (var sourceStream = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        await using (var targetStream = new FileStream(targetPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            await sourceStream.CopyToAsync(targetStream, cancellationToken);
+        }
+
+        string? previewRelativePath = null;
+
+        if (draft.CoverBytes is { Length: > 0 })
+        {
+            var coversDirectory = TaskloomPaths.GetAudioCoversDirectoryPath();
+            Directory.CreateDirectory(coversDirectory);
+
+            var coverFileName = $"{Guid.NewGuid():N}.jpg";
+            var coverPath = Path.Combine(coversDirectory, coverFileName);
+            await System.IO.File.WriteAllBytesAsync(coverPath, draft.CoverBytes, cancellationToken);
+            previewRelativePath = Path.Combine("Media", "AudioCovers", coverFileName);
+        }
+
+        var sourceInfo = new FileInfo(sourceFilePath);
+        var relativePath = Path.Combine("Media", "Audio", storedFileName);
+
+        return new RecordAttachment(
+            Guid.NewGuid(),
+            recordId,
+            RecordAttachmentKind.Audio,
+            sourceInfo.Name,
+            storedFileName,
+            relativePath,
+            contentType,
+            sourceInfo.Length,
+            DateTime.UtcNow,
+            draft.SortOrder,
+            draft.DisplayTitle,
+            draft.DurationSeconds,
+            previewRelativePath);
+    }
+
+    public string? GetAbsolutePath(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return null;
+        }
+
+        return Path.Combine(TaskloomPaths.GetAppDataDirectoryPath(), relativePath);
+    }
+
+    public void DeleteIfExists(string? relativePath)
+    {
+        var absolutePath = GetAbsolutePath(relativePath);
+
+        if (string.IsNullOrWhiteSpace(absolutePath) || !System.IO.File.Exists(absolutePath))
+        {
+            return;
+        }
+
+        System.IO.File.Delete(absolutePath);
+    }
+}

@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 using Taskloom.Common.Windowing;
 using Taskloom.Presentation.ViewModels;
 
@@ -94,8 +97,14 @@ public partial class MainWindow : Window
         OpenEditorWindow(viewModel.ActiveEditor);
     }
 
-    private async void RecordsList_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private async void RecordsList_OnPreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
+        if (FindInteractiveAudioElement(e.OriginalSource as DependencyObject) is not null)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (DataContext is not MainWindowViewModel viewModel)
         {
             return;
@@ -129,6 +138,59 @@ public partial class MainWindow : Window
         {
             await viewModel.DeleteRecordCommand.ExecuteAsync(null);
         }
+    }
+
+    private void AudioSeekSlider_OnDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        var slider = ResolveSlider(sender as DependencyObject);
+
+        if (DataContext is not MainWindowViewModel viewModel ||
+            slider is not { Tag: RecordAudioListItemViewModel audioItem })
+        {
+            return;
+        }
+
+        viewModel.EndSeekAudio(audioItem);
+        viewModel.SeekAudio(audioItem, slider.Value);
+        e.Handled = true;
+    }
+
+    private void AudioSeekSlider_OnDragStarted(object sender, DragStartedEventArgs e)
+    {
+        var slider = ResolveSlider(sender as DependencyObject);
+
+        if (DataContext is not MainWindowViewModel viewModel ||
+            slider is not { Tag: RecordAudioListItemViewModel audioItem })
+        {
+            return;
+        }
+
+        viewModel.BeginSeekAudio(audioItem);
+        e.Handled = true;
+    }
+
+    private void AudioSeekSlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel ||
+            sender is not Slider { Tag: RecordAudioListItemViewModel audioItem, IsMouseCaptureWithin: true } slider)
+        {
+            return;
+        }
+
+        viewModel.UpdateSeekAudioPreview(audioItem, slider.Value);
+    }
+
+    private void AudioSeekSlider_OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel ||
+            sender is not Slider { Tag: RecordAudioListItemViewModel audioItem } slider)
+        {
+            return;
+        }
+
+        viewModel.EndSeekAudio(audioItem);
+        viewModel.SeekAudio(audioItem, slider.Value);
+        e.Handled = true;
     }
 
     private void CustomTitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -361,5 +423,35 @@ public partial class MainWindow : Window
             : nameof(System.Windows.WindowState.Normal);
 
         await App.CurrentApp.SettingsService.SaveAsync(settings);
+    }
+
+    private static DependencyObject? FindInteractiveAudioElement(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is System.Windows.Controls.Button or Slider or Thumb)
+            {
+                return source;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
+    }
+
+    private static Slider? ResolveSlider(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is Slider slider)
+            {
+                return slider;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
     }
 }

@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
+using Microsoft.Windows.ApplicationModel.DynamicDependency;
 using Taskloom.Infrastructure.Localization;
+using Taskloom.Infrastructure.Media;
 using Taskloom.Infrastructure.Notifications;
 using Taskloom.Infrastructure.Repositories;
 using Taskloom.Infrastructure.Settings;
@@ -10,6 +12,7 @@ using Taskloom.Infrastructure.Tray;
 using Taskloom.Presentation.ViewModels;
 using Taskloom.Presentation.Views;
 using Taskloom.Services.Localization;
+using Taskloom.Services.Media;
 using Taskloom.Services.Notifications;
 using Taskloom.Services.Records;
 using Taskloom.Services.Settings;
@@ -29,14 +32,21 @@ public partial class App : System.Windows.Application
 
     private IEventReminderService? _eventReminderService;
     private IAppNotificationService? _notificationService;
+    private IAudioPlaybackService? _audioPlaybackService;
     private WindowsTrayService? _trayService;
+    private bool _windowsAppSdkBootstrapped;
+    private readonly string _notificationLogPath = TaskloomPaths.GetNotificationLogPath();
+    private readonly string _startupLogPath = TaskloomPaths.GetStartupLogPath();
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        RegisterGlobalExceptionHandlers();
 
         try
         {
+            InitializeWindowsAppSdkBootstrap();
+
             SettingsService = new AppSettingsService(TaskloomPaths.GetSettingsPath());
             var settings = await SettingsService.LoadAsync();
 
@@ -56,11 +66,20 @@ public partial class App : System.Windows.Application
             await databaseInitializer.InitializeAsync();
 
             var repository = new SqliteCalendarRecordRepository(connectionFactory);
-            var recordService = new CalendarRecordService(repository);
+            var imageStorageService = new RecordImageStorageService();
+            var audioStorageService = new RecordAudioStorageService();
+            _audioPlaybackService = new AudioPlaybackService();
+            var recordService = new CalendarRecordService(repository, imageStorageService, audioStorageService);
             _trayService = new WindowsTrayService(localizationService);
-            _notificationService = CreateNotificationService(_trayService);
+            _notificationService = CreateNotificationService(localizationService, _trayService);
             _eventReminderService = new WindowsBalloonEventReminderService(recordService, localizationService, _notificationService);
-            var mainWindowViewModel = new MainWindowViewModel(recordService, localizationService, SettingsService);
+            var mainWindowViewModel = new MainWindowViewModel(
+                recordService,
+                localizationService,
+                SettingsService,
+                imageStorageService,
+                audioStorageService,
+                _audioPlaybackService);
 
             await mainWindowViewModel.InitializeAsync();
 
@@ -78,6 +97,8 @@ public partial class App : System.Windows.Application
         }
         catch (Exception exception)
         {
+            TaskloomDiagnosticLog.AppendException(_startupLogPath, exception, "Startup failure");
+
             var title = LocalizationService?.GetString("Startup.ErrorTitle") ?? "Taskloom";
             var message = LocalizationService is null
                 ? $"Не удалось запустить приложение.{Environment.NewLine}{Environment.NewLine}{exception.Message}"
@@ -97,13 +118,97 @@ public partial class App : System.Windows.Application
     {
         _eventReminderService?.Dispose();
         _notificationService?.Dispose();
+        _audioPlaybackService?.Dispose();
         _trayService?.Dispose();
+
+        if (_windowsAppSdkBootstrapped)
+        {
+            try
+            {
+                Bootstrap.Shutdown();
+            }
+            catch
+            {
+                // Ошибка завершения bootstrapper не должна ломать выход из приложения.
+            }
+        }
+
         base.OnExit(e);
     }
 
-    private static IAppNotificationService CreateNotificationService(WindowsTrayService trayService)
+    private IAppNotificationService CreateNotificationService(
+        LocalizationService localizationService,
+        WindowsTrayService trayService)
     {
-        return new WindowsBalloonAppNotificationService(trayService.NotifyIcon);
+        var fallbackNotificationService = new WindowsBalloonAppNotificationService(trayService.NotifyIcon);
+
+        return new WindowsAppSdkNotificationService(
+            fallbackNotificationService,
+            () => Dispatcher.BeginInvoke(OnNotificationActivated));
+    }
+
+    private void OnNotificationActivated()
+    {
+        OnTrayOpenRequested(this, EventArgs.Empty);
+    }
+
+    private void InitializeWindowsAppSdkBootstrap()
+    {
+        try
+        {
+            var initializeResult = Bootstrap.TryInitialize(0x00010008, out var hresult);
+            _windowsAppSdkBootstrapped = initializeResult;
+
+            if (initializeResult)
+            {
+                WriteNotificationDiagnostic("Windows App SDK bootstrap initialized successfully.");
+                return;
+            }
+
+            WriteNotificationDiagnostic($"Windows App SDK bootstrap failed. HRESULT=0x{hresult:X8}.");
+        }
+        catch (Exception exception)
+        {
+            _windowsAppSdkBootstrapped = false;
+            WriteNotificationDiagnostic($"Windows App SDK bootstrap threw exception. {exception}");
+        }
+    }
+
+    private void WriteNotificationDiagnostic(string message)
+    {
+        TaskloomDiagnosticLog.Append(_notificationLogPath, message);
+    }
+
+    private void RegisterGlobalExceptionHandlers()
+    {
+        DispatcherUnhandledException -= OnDispatcherUnhandledException;
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException -= OnCurrentDomainUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnCurrentDomainUnhandledException;
+        TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+    }
+
+    private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    {
+        TaskloomDiagnosticLog.AppendException(_startupLogPath, e.Exception, "Dispatcher unhandled exception");
+    }
+
+    private void OnCurrentDomainUnhandledException(object? sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception exception)
+        {
+            TaskloomDiagnosticLog.AppendException(_startupLogPath, exception, "AppDomain unhandled exception");
+            return;
+        }
+
+        TaskloomDiagnosticLog.Append(_startupLogPath, $"AppDomain unhandled exception object: {e.ExceptionObject}");
+    }
+
+    private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        TaskloomDiagnosticLog.AppendException(_startupLogPath, e.Exception, "Unobserved task exception");
+        e.SetObserved();
     }
 
     private void OnTrayOpenRequested(object? sender, EventArgs e)
