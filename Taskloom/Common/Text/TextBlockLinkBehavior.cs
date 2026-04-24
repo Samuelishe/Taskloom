@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -56,17 +55,7 @@ public static class TextBlockLinkBehavior
 
     private static void OnHyperlinkRequestNavigate(object sender, RequestNavigateEventArgs eventArgs)
     {
-        try
-        {
-            Process.Start(new ProcessStartInfo(eventArgs.Uri.AbsoluteUri)
-            {
-                UseShellExecute = true
-            });
-        }
-        catch
-        {
-            // Ошибка открытия ссылки не должна ломать UI.
-        }
+        LinkNavigator.TryOpen(eventArgs.Uri.AbsoluteUri);
 
         eventArgs.Handled = true;
     }

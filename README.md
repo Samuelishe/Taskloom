@@ -95,6 +95,14 @@ Taskloom detects and makes links clickable directly inside record descriptions, 
 
 Links are opened through the system handler.
 
+### ▶️ Video link previews
+- YouTube links in record descriptions can show cached title + thumbnail previews directly in the record card
+- Preview cards are limited to five items; additional video links fall back to a simple text list
+- If YouTube `oEmbed` does not return a title, Taskloom tries to parse the public video page as a fallback before using a neutral placeholder
+- With optional `TASKLOOM_YOUTUBE_API_KEY`, YouTube previews can also show description and duration using the free official API quota
+- The general link preview pipeline already classifies `YouTube`, `Twitch`, `VK Видео`, and `RuTube` links for future provider-specific enrichment
+- Video preview thumbnails are cached per record under `%LocalAppData%\\Taskloom\\Records\\<record-id>\\link-previews`
+
 ### 🎨 Theming and UX
 - Built-in light, dark, OS-inspired, and custom themes
 - Custom title bars styled to match the app

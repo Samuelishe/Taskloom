@@ -1,5 +1,57 @@
 # Журнал работ
 
+## 2026-04-24 - Базовый pipeline video link preview
+
+### Что сделано
+
+- Добавлен общий pipeline для внешних ссылок: обычное распознавание ссылок дополнено классификацией `YouTube`, `Twitch`, `VK Видео` и `RuTube`.
+- Введён сервис `LinkPreviewService` с provider-архитектурой и локальным кэшем preview-данных в каталоге записи.
+- Реализован первый provider для `YouTube`: карточка записи показывает заголовок и thumbnail видео, если они доступны по сети.
+- Убран неудачный fallback на сырой URL: если title не удалось получить, карточка теперь использует аккуратный provider-based заголовок вроде `YouTube video`, а не фрагмент ссылки.
+- Модель и UI preview-карточки расширены под `description` и `duration`, чтобы следующий шаг с API-провайдерами не требовал заново перестраивать layout.
+- Для YouTube добавлена бесплатная optional-интеграция через `TASKLOOM_YOUTUBE_API_KEY`: при наличии ключа карточка может получать `description` и `duration` из официального YouTube Data API.
+- Для YouTube добавлен HTML-fallback без ключа: если `oEmbed` не вернул title, провайдер пытается прочитать `og:title`, `<title>`, `ld+json`, `ytInitialPlayerResponse` и `og:description` из публичной страницы видео.
+- Для YouTube preview добавлен fallback на placeholder без блокировки UI; если thumbnail не удалось получить, карточка остаётся кликабельной и повторит попытку на следующей загрузке.
+- Preview-карточки видео выводятся в горизонтальной ленте и ограничены первыми пятью элементами.
+- Видео-ссылки сверх лимита или без активного provider показываются ниже отдельным текстовым списком, без попытки раздувать карточку.
+- Thumbnail preview сохраняются в `%LocalAppData%\\Taskloom\\Records\\<record-id>\\link-previews`, а metadata — в `%LocalAppData%\\Taskloom\\Records\\<record-id>\\link-previews.json`.
+- Открытие preview и overflow-ссылок идёт через системный браузер.
+
+### Изменённые и созданные файлы
+
+- `README.md`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Common/Text/DetectedLink.cs`
+- `Taskloom/Common/Text/DetectedLinkKind.cs`
+- `Taskloom/Common/Text/LinkClassifier.cs`
+- `Taskloom/Common/Text/LinkNavigator.cs`
+- `Taskloom/Common/Text/TextBlockLinkBehavior.cs`
+- `Taskloom/Infrastructure/Links/ILinkPreviewProvider.cs`
+- `Taskloom/Infrastructure/Links/LinkPreviewFetchResult.cs`
+- `Taskloom/Infrastructure/Links/LinkPreviewService.cs`
+- `Taskloom/Infrastructure/Links/YouTubeLinkPreviewProvider.cs`
+- `Taskloom/Infrastructure/Storage/TaskloomPaths.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordExternalLinkItemViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordVideoLinkItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Видео-ссылки визуально богаче обычных ссылок, но их enrichment нельзя делать жёсткой зависимостью от интернета или от сохранения записи.
+- Provider-архитектура нужна заранее, потому что `YouTube`, `Twitch`, `VK Видео` и `RuTube` используют разные URL-форматы и разные механики получения метаданных.
+- Ограничение preview-ленты первыми пятью элементами защищает карточки записей от деградации layout при большом количестве ссылок.
+- Поля `description` и `duration` уже подготовлены архитектурно; для YouTube они теперь могут заполняться через бесплатную квоту Data API, а для Twitch следующим шагом нужен отдельный бесплатный Helix-provider.
+- HTML-parsing используется только как fallback и не заменяет официальный API-слой; так карточки становятся полезнее для большинства пользователей без обязательного ключа.
+
 ## 2026-04-24 - Ховер-подсказки строк и снятие выделения записи
 
 ### Что сделано

@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using Microsoft.Windows.ApplicationModel.DynamicDependency;
 using Taskloom.Infrastructure.Localization;
+using Taskloom.Infrastructure.Links;
 using Taskloom.Infrastructure.Media;
 using Taskloom.Infrastructure.Notifications;
 using Taskloom.Infrastructure.Repositories;
@@ -12,6 +13,7 @@ using Taskloom.Infrastructure.Tray;
 using Taskloom.Presentation.ViewModels;
 using Taskloom.Presentation.Views;
 using Taskloom.Services.Localization;
+using Taskloom.Services.Links;
 using Taskloom.Services.Media;
 using Taskloom.Services.Notifications;
 using Taskloom.Services.Records;
@@ -70,6 +72,7 @@ public partial class App : System.Windows.Application
             var imageStorageService = new RecordImageStorageService();
             var audioStorageService = new RecordAudioStorageService();
             var recordResourceMetadataService = new RecordResourceMetadataService();
+            ILinkPreviewService linkPreviewService = new LinkPreviewService();
             _audioPlaybackService = new AudioPlaybackService();
             var recordService = new CalendarRecordService(repository, imageStorageService, audioStorageService, recordResourceMetadataService);
             await RunStartupCleanupAsync(recordService, settings.RecordCleanupMode);
@@ -82,7 +85,8 @@ public partial class App : System.Windows.Application
                 SettingsService,
                 imageStorageService,
                 audioStorageService,
-                _audioPlaybackService);
+                _audioPlaybackService,
+                linkPreviewService);
 
             await mainWindowViewModel.InitializeAsync();
 

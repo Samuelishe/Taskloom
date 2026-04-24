@@ -108,6 +108,7 @@
 - адаптивный карточный layout списка записей с вычислением ширины карточек через converter
 - `calendar-first` компоновка `MainWindow`
 - selected-state карточек записей с утолщённой левой границей и усиленным фоном
+- отдельный video link preview block под описанием записи, до пяти preview-карточек в горизонтальной ленте и fallback-список остальных video links
 - перевод основных цветов окон и контролов на theme resources
 - быстрый toggle статуса задач должен идти через `MainWindowViewModel` и прикладной сервис, а не через code-behind
 
@@ -193,6 +194,7 @@
 - `RecordResourceMetadataService` поддерживает metadata-файл `record.json` рядом с ресурсами записи и удаляет каталог записи целиком при полном удалении записи.
 - Presentation-слой пока использует grid layout миниатюр; горизонтальная drag-лента остаётся следующим отдельным UX-этапом.
 - Для описания записи используется presentation-only парсинг ссылок: исходный текст `Details` не меняется, а `TextBlock` рендерит `Run/Hyperlink` поверх исходной строки.
+- Для поддерживаемых video links используется отдельный pipeline: классификация ссылки, provider-specific enrichment, локальный thumbnail cache в каталоге записи и fallback на placeholder без падения UI.
 - Для воспроизведения аудио используется единый `AudioPlaybackService` на базе WPF `MediaPlayer`; карточка записи показывает playlist по audio-attachments, а одновременно играет только один трек.
 
 ### Почему так

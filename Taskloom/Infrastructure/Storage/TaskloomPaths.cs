@@ -127,6 +127,22 @@ public static class TaskloomPaths
     }
 
     /// <summary>
+    /// Возвращает путь к каталогу preview-данных внешних ссылок конкретной записи.
+    /// </summary>
+    public static string GetRecordLinkPreviewsDirectoryPath(Guid recordId)
+    {
+        return Path.Combine(GetRecordDirectoryPath(recordId), "link-previews");
+    }
+
+    /// <summary>
+    /// Возвращает путь к metadata-файлу preview-данных внешних ссылок конкретной записи.
+    /// </summary>
+    public static string GetRecordLinkPreviewsMetadataPath(Guid recordId)
+    {
+        return Path.Combine(GetRecordDirectoryPath(recordId), "link-previews.json");
+    }
+
+    /// <summary>
     /// Возвращает путь к metadata-файлу конкретной записи.
     /// </summary>
     public static string GetRecordMetadataPath(Guid recordId)

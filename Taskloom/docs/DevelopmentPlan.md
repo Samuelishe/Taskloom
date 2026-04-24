@@ -33,10 +33,11 @@
 - [x] Кликабельные ссылки в описании записи
 - [x] Audio attachments и playlist в карточке записи
 - [x] Startup cleanup старых записей и per-record resource folders
+- [x] Базовый link preview pipeline для внешних видео-ссылок
 
 ## Точка продолжения
 
-Следующий рабочий этап: ручная проверка startup cleanup, instant-apply настроек, audio playlist, task reminders, event reminders, multiple image attachments и обновлённого редактора записи, затем отдельный этап `strip mode`.
+Следующий рабочий этап: расширение video link preview providers после базового pipeline, затем возврат к отдельному этапу `strip mode`.
 
 Перед продолжением новой сессии нужно прочитать:
 
@@ -219,6 +220,14 @@
 - [x] Перевести ресурсы записи на каталоги `%LocalAppData%\\Taskloom\\Records\\<record-id>`
 - [x] Добавить metadata-файл `record.json` для файловой части записи
 - [x] Перевести окно настроек на instant apply без кнопки `Применить`
+- [x] Добавить базовый pipeline распознавания и enrichment для video links
+- [x] Показать до 5 video preview карточек в горизонтальной ленте
+- [x] Сохранять thumbnail preview в каталоге записи и переиспользовать локальный кэш
+- [x] Для YouTube загружать title и thumbnail автоматически, с fallback на placeholder при отсутствии сети
+- [x] Подготовить UI-модель preview-карточки под `description` и `duration`
+- [x] Поддержать optional `TASKLOOM_YOUTUBE_API_KEY` для бесплатного enrichment `description` и `duration`
+- [ ] Добавить отдельный Twitch provider для clips и VOD
+- [ ] Добавить отдельные providers для VK Видео и RuTube
 - [ ] Добавить `strip mode` с горизонтальным drag-scroll внутри контейнера
 - [x] Добавить режим сворачивания приложения в трей
 - [x] Добавить tray menu: `Открыть`, `Настройки`, `Выход`

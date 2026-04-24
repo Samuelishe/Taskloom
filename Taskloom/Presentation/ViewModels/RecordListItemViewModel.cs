@@ -1,5 +1,6 @@
 using Taskloom.Domain;
 using Taskloom.Services.Localization;
+using Taskloom.Services.Links;
 using Taskloom.Services.Media;
 using Taskloom.Services.Records;
 
@@ -21,6 +22,8 @@ public sealed class RecordListItemViewModel : IDisposable
         DateTime createdUtc,
         IReadOnlyList<RecordImageListItemViewModel>? images = null,
         IReadOnlyList<RecordAudioListItemViewModel>? audios = null,
+        IReadOnlyList<RecordVideoLinkItemViewModel>? videoLinks = null,
+        IReadOnlyList<RecordExternalLinkItemViewModel>? overflowVideoLinks = null,
         string? locationDisplay = null,
         EventStatus? eventStatus = null,
         string? eventStatusText = null,
@@ -37,6 +40,8 @@ public sealed class RecordListItemViewModel : IDisposable
         CreatedUtc = createdUtc;
         Images = images ?? [];
         Audios = audios ?? [];
+        VideoLinks = videoLinks ?? [];
+        OverflowVideoLinks = overflowVideoLinks ?? [];
         VisibleImages = Images.Take(9).ToArray();
         LocationDisplay = locationDisplay;
         EventStatus = eventStatus;
@@ -73,6 +78,10 @@ public sealed class RecordListItemViewModel : IDisposable
 
     public bool HasAudios => Audios.Count > 0;
 
+    public bool HasVideoLinks => VideoLinks.Count > 0;
+
+    public bool HasOverflowVideoLinks => OverflowVideoLinks.Count > 0;
+
     public bool HasSingleImage => Images.Count == 1;
 
     public bool HasTwoImages => Images.Count == 2;
@@ -86,6 +95,10 @@ public sealed class RecordListItemViewModel : IDisposable
     public IReadOnlyList<RecordImageListItemViewModel> Images { get; }
 
     public IReadOnlyList<RecordAudioListItemViewModel> Audios { get; }
+
+    public IReadOnlyList<RecordVideoLinkItemViewModel> VideoLinks { get; }
+
+    public IReadOnlyList<RecordExternalLinkItemViewModel> OverflowVideoLinks { get; }
 
     public IReadOnlyList<RecordImageListItemViewModel> VisibleImages { get; }
 
@@ -137,12 +150,14 @@ public sealed class RecordListItemViewModel : IDisposable
     public static RecordListItemViewModel Create(
         CalendarRecord record,
         ILocalizationService localizationService,
+        ILinkPreviewService linkPreviewService,
         IRecordImageStorageService imageStorageService,
         IRecordAudioStorageService audioStorageService,
         IAudioPlaybackService audioPlaybackService)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(localizationService);
+        ArgumentNullException.ThrowIfNull(linkPreviewService);
         ArgumentNullException.ThrowIfNull(imageStorageService);
         ArgumentNullException.ThrowIfNull(audioStorageService);
         ArgumentNullException.ThrowIfNull(audioPlaybackService);
@@ -169,6 +184,30 @@ public sealed class RecordListItemViewModel : IDisposable
             .Where(static item => !string.IsNullOrWhiteSpace(item.Path))
             .ToArray();
 
+        var detectedVideoLinks = linkPreviewService.DetectLinks(record.Details)
+            .Where(static link => link.IsVideoLink)
+            .ToArray();
+
+        var videoPreviewItems = new List<RecordVideoLinkItemViewModel>();
+        var overflowVideoLinks = new List<RecordExternalLinkItemViewModel>();
+
+        foreach (var link in detectedVideoLinks)
+        {
+            if (videoPreviewItems.Count < 5 && linkPreviewService.CanPreview(link))
+            {
+                videoPreviewItems.Add(new RecordVideoLinkItemViewModel(
+                    record.Id,
+                    link,
+                    linkPreviewService,
+                    localizationService.GetString("RecordLinkPreview.LoadingTitle"),
+                    localizationService.GetString("RecordLinkPreview.PlaceholderTitle")));
+
+                continue;
+            }
+
+            overflowVideoLinks.Add(new RecordExternalLinkItemViewModel(link));
+        }
+
         return record switch
         {
             TaskRecord taskRecord => new RecordListItemViewModel(
@@ -182,6 +221,8 @@ public sealed class RecordListItemViewModel : IDisposable
                 taskRecord.CreatedUtc,
                 images,
                 audios,
+                videoPreviewItems,
+                overflowVideoLinks,
                 null,
                 null,
                 null,
@@ -200,7 +241,9 @@ public sealed class RecordListItemViewModel : IDisposable
                 false,
                 noteRecord.CreatedUtc,
                 images,
-                audios),
+                audios,
+                videoPreviewItems,
+                overflowVideoLinks),
 
             EventRecord eventRecord => new RecordListItemViewModel(
                 eventRecord.Id,
@@ -213,6 +256,8 @@ public sealed class RecordListItemViewModel : IDisposable
                 eventRecord.CreatedUtc,
                 images,
                 audios,
+                videoPreviewItems,
+                overflowVideoLinks,
                 string.IsNullOrWhiteSpace(eventRecord.Location)
                     ? null
                     : localizationService.Format("RecordList.EventLocation", eventRecord.Location),
@@ -229,7 +274,9 @@ public sealed class RecordListItemViewModel : IDisposable
                 false,
                 summaryRecord.CreatedUtc,
                 images,
-                audios),
+                audios,
+                videoPreviewItems,
+                overflowVideoLinks),
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {record.GetType().Name}.")
         };

@@ -3,8 +3,10 @@ using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Taskloom.Common.Text;
 using Taskloom.Infrastructure.Storage;
 using Taskloom.Domain;
+using Taskloom.Services.Links;
 using Taskloom.Services.Localization;
 using Taskloom.Services.Media;
 using Taskloom.Services.Records;
@@ -23,6 +25,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IRecordImageStorageService _imageStorageService;
     private readonly IRecordAudioStorageService _audioStorageService;
     private readonly IAudioPlaybackService _audioPlaybackService;
+    private readonly ILinkPreviewService _linkPreviewService;
     private readonly string _recordLoadLogPath = TaskloomPaths.GetRecordLoadLogPath();
     private bool _isInitialized;
     private bool _isUpdatingFilterOptions;
@@ -33,7 +36,8 @@ public partial class MainWindowViewModel : ObservableObject
         IAppSettingsService settingsService,
         IRecordImageStorageService imageStorageService,
         IRecordAudioStorageService audioStorageService,
-        IAudioPlaybackService audioPlaybackService)
+        IAudioPlaybackService audioPlaybackService,
+        ILinkPreviewService linkPreviewService)
     {
         _recordService = recordService ?? throw new ArgumentNullException(nameof(recordService));
         _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
@@ -41,6 +45,7 @@ public partial class MainWindowViewModel : ObservableObject
         _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
         _audioStorageService = audioStorageService ?? throw new ArgumentNullException(nameof(audioStorageService));
         _audioPlaybackService = audioPlaybackService ?? throw new ArgumentNullException(nameof(audioPlaybackService));
+        _linkPreviewService = linkPreviewService ?? throw new ArgumentNullException(nameof(linkPreviewService));
 
         Records = new ObservableCollection<RecordListItemViewModel>();
         FilterOptions = new ObservableCollection<RecordTypeFilterOptionViewModel>();
@@ -52,6 +57,7 @@ public partial class MainWindowViewModel : ObservableObject
         ToggleTaskCompletionCommand = new AsyncRelayCommand<RecordListItemViewModel?>(ToggleTaskCompletionAsync, CanToggleTaskCompletion);
         OpenRecordImageCommand = new RelayCommand<RecordImageListItemViewModel?>(OpenRecordImage, CanOpenRecordImage);
         OpenRecordAudioCommand = new RelayCommand<RecordAudioListItemViewModel?>(OpenRecordAudio, CanOpenRecordAudio);
+        OpenExternalLinkCommand = new RelayCommand<string?>(OpenExternalLink, CanOpenExternalLink);
         ToggleAudioPlaybackCommand = new RelayCommand<RecordAudioListItemViewModel?>(ToggleAudioPlayback, CanToggleAudioPlayback);
         PreviousDayCommand = new RelayCommand(MoveToPreviousDay);
         NextDayCommand = new RelayCommand(MoveToNextDay);
@@ -86,6 +92,8 @@ public partial class MainWindowViewModel : ObservableObject
     public IRelayCommand<RecordImageListItemViewModel?> OpenRecordImageCommand { get; }
 
     public IRelayCommand<RecordAudioListItemViewModel?> OpenRecordAudioCommand { get; }
+
+    public IRelayCommand<string?> OpenExternalLinkCommand { get; }
 
     public IRelayCommand<RecordAudioListItemViewModel?> ToggleAudioPlaybackCommand { get; }
 
@@ -218,6 +226,7 @@ public partial class MainWindowViewModel : ObservableObject
                     Records.Add(RecordListItemViewModel.Create(
                         record,
                         _localizationService,
+                        _linkPreviewService,
                         _imageStorageService,
                         _audioStorageService,
                         _audioPlaybackService));
@@ -382,6 +391,21 @@ public partial class MainWindowViewModel : ObservableObject
     private static bool CanOpenRecordAudio(RecordAudioListItemViewModel? item)
     {
         return item is not null && !string.IsNullOrWhiteSpace(item.Path);
+    }
+
+    private void OpenExternalLink(string? target)
+    {
+        if (!LinkNavigator.TryOpen(target))
+        {
+            return;
+        }
+
+        StatusText = _localizationService.Format("MainWindow.Status.LinkOpened", target ?? string.Empty);
+    }
+
+    private static bool CanOpenExternalLink(string? target)
+    {
+        return !string.IsNullOrWhiteSpace(target);
     }
 
     private void ToggleAudioPlayback(RecordAudioListItemViewModel? item)

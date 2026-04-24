@@ -643,6 +643,7 @@
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
 
                                                     <Border
@@ -737,9 +738,215 @@
                                                         TextWrapping="Wrap"
                                                         ToolTip="{Binding Details}" />
 
+                                                    <StackPanel
+                                                        x:Name="VideoLinksHost"
+                                                        Grid.Row="4"
+                                                        Grid.ColumnSpan="2"
+                                                        Margin="0,12,0,0"
+                                                        Visibility="Collapsed">
+                                                        <ScrollViewer
+                                                            HorizontalScrollBarVisibility="Auto"
+                                                            VerticalScrollBarVisibility="Disabled">
+                                                            <ItemsControl ItemsSource="{Binding VideoLinks}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <StackPanel Orientation="Horizontal" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Button
+                                                                            Width="176"
+                                                                            Margin="0,0,10,0"
+                                                                            Background="Transparent"
+                                                                            BorderThickness="0"
+                                                                            Command="{Binding DataContext.OpenExternalLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding Url}"
+                                                                            Cursor="Hand"
+                                                                            FocusVisualStyle="{x:Null}"
+                                                                            Padding="0"
+                                                                            ToolTip="{Binding ToolTipText}">
+                                                                            <Border
+                                                                                Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                                                                                BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                                BorderThickness="1"
+                                                                                CornerRadius="12"
+                                                                                Padding="10">
+                                                                                <StackPanel>
+                                                                                    <Border
+                                                                                        Height="96"
+                                                                                        Background="{DynamicResource App.SurfaceMutedBrush}"
+                                                                                        BorderBrush="{DynamicResource App.BorderBrush}"
+                                                                                        BorderThickness="1"
+                                                                                        CornerRadius="10"
+                                                                                        ClipToBounds="True">
+                                                                                        <Grid>
+                                                                                            <Image
+                                                                                                Stretch="UniformToFill"
+                                                                                                Source="{Binding ThumbnailPath, Converter={StaticResource ImagePathToBitmapConverter}, ConverterParameter=240}">
+                                                                                                <Image.Style>
+                                                                                                    <Style TargetType="Image">
+                                                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                                                        <Style.Triggers>
+                                                                                                            <DataTrigger Binding="{Binding HasThumbnail}" Value="True">
+                                                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                                                            </DataTrigger>
+                                                                                                        </Style.Triggers>
+                                                                                                    </Style>
+                                                                                                </Image.Style>
+                                                                                            </Image>
+
+                                                                                            <Border
+                                                                                                Background="#30000000"
+                                                                                                CornerRadius="10">
+                                                                                                <Border.Style>
+                                                                                                    <Style TargetType="Border">
+                                                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                                                        <Style.Triggers>
+                                                                                                            <DataTrigger Binding="{Binding HasThumbnail}" Value="True">
+                                                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                                                            </DataTrigger>
+                                                                                                        </Style.Triggers>
+                                                                                                    </Style>
+                                                                                                </Border.Style>
+                                                                                            </Border>
+
+                                                                                            <StackPanel
+                                                                                                HorizontalAlignment="Center"
+                                                                                                VerticalAlignment="Center">
+                                                                                                <TextBlock
+                                                                                                    HorizontalAlignment="Center"
+                                                                                                    FontFamily="Segoe MDL2 Assets"
+                                                                                                    FontSize="26"
+                                                                                                    Foreground="White"
+                                                                                                    Text="&#xE768;" />
+                                                                                                <TextBlock
+                                                                                                    Margin="0,8,0,0"
+                                                                                                    FontSize="11"
+                                                                                                    FontWeight="SemiBold"
+                                                                                                    Foreground="{DynamicResource App.TextMutedBrush}"
+                                                                                                    Text="{markup:Loc RecordLinkPreview.NoImage}">
+                                                                                                    <TextBlock.Style>
+                                                                                                        <Style TargetType="TextBlock">
+                                                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                                                            <Style.Triggers>
+                                                                                                                <DataTrigger Binding="{Binding HasThumbnail}" Value="True">
+                                                                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                                                                </DataTrigger>
+                                                                                                            </Style.Triggers>
+                                                                                                        </Style>
+                                                                                                    </TextBlock.Style>
+                                                                                                </TextBlock>
+                                                                                            </StackPanel>
+                                                                                        </Grid>
+                                                                                    </Border>
+
+                                                                                    <TextBlock
+                                                                                        Margin="0,10,0,0"
+                                                                                        FontSize="13"
+                                                                                        FontWeight="SemiBold"
+                                                                                        Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                                                                        Text="{Binding Title}"
+                                                                                        TextTrimming="CharacterEllipsis"
+                                                                                        ToolTip="{Binding Title}" />
+
+                                                                                    <TextBlock
+                                                                                        Margin="0,4,0,0"
+                                                                                        FontSize="12"
+                                                                                        Foreground="{DynamicResource App.TextMutedBrush}"
+                                                                                        Text="{Binding SecondaryMetaLine}" />
+
+                                                                                    <TextBlock
+                                                                                        Margin="0,6,0,0"
+                                                                                        FontSize="12"
+                                                                                        Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                                                        Text="{Binding Description}"
+                                                                                        TextTrimming="WordEllipsis"
+                                                                                        TextWrapping="Wrap"
+                                                                                        MaxHeight="34"
+                                                                                        ToolTip="{Binding DescriptionToolTip}">
+                                                                                        <TextBlock.Style>
+                                                                                            <Style TargetType="TextBlock">
+                                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                                                <Style.Triggers>
+                                                                                                    <DataTrigger Binding="{Binding HasDescription}" Value="True">
+                                                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                                                    </DataTrigger>
+                                                                                                </Style.Triggers>
+                                                                                            </Style>
+                                                                                        </TextBlock.Style>
+                                                                                    </TextBlock>
+                                                                                </StackPanel>
+                                                                            </Border>
+                                                                        </Button>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </ScrollViewer>
+
+                                                        <Border
+                                                            Margin="0,10,0,0"
+                                                            Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                                                            BorderBrush="{DynamicResource App.BorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="12"
+                                                            Padding="12">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding HasOverflowVideoLinks}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <StackPanel>
+                                                                <TextBlock
+                                                                    FontSize="12"
+                                                                    FontWeight="SemiBold"
+                                                                    Foreground="{DynamicResource App.TextMutedBrush}"
+                                                                    Text="{markup:Loc RecordLinkPreview.MoreLinks}" />
+                                                                <ItemsControl
+                                                                    Margin="0,8,0,0"
+                                                                    ItemsSource="{Binding OverflowVideoLinks}">
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <Button
+                                                                                Margin="0,0,0,6"
+                                                                                HorizontalContentAlignment="Left"
+                                                                                Background="Transparent"
+                                                                                BorderThickness="0"
+                                                                                Command="{Binding DataContext.OpenExternalLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                CommandParameter="{Binding Url}"
+                                                                                Cursor="Hand"
+                                                                                FocusVisualStyle="{x:Null}"
+                                                                                Padding="0"
+                                                                                ToolTip="{Binding Url}">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <TextBlock
+                                                                                        FontSize="12"
+                                                                                        FontWeight="SemiBold"
+                                                                                        Foreground="{DynamicResource App.TextMutedBrush}"
+                                                                                        Text="{Binding SourceDisplayName}" />
+                                                                                    <TextBlock
+                                                                                        Margin="8,0,0,0"
+                                                                                        FontSize="12"
+                                                                                        Foreground="{DynamicResource App.AccentPrimaryBrush}"
+                                                                                        Text="{Binding DisplayText}"
+                                                                                        TextTrimming="CharacterEllipsis" />
+                                                                                </StackPanel>
+                                                                            </Button>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </StackPanel>
+
                                                     <ItemsControl
                                                         x:Name="AudioHost"
-                                                        Grid.Row="4"
+                                                        Grid.Row="5"
                                                         Grid.ColumnSpan="2"
                                                         Margin="0,12,0,0"
                                                         ItemsSource="{Binding Audios}"
@@ -973,7 +1180,7 @@
 
                                                     <StackPanel
                                                         x:Name="ImagesHost"
-                                                        Grid.Row="5"
+                                                        Grid.Row="6"
                                                         Grid.ColumnSpan="2"
                                                         Margin="0,12,0,0"
                                                         Visibility="Collapsed">
@@ -1759,6 +1966,14 @@
 
                                             <DataTrigger Binding="{Binding HasAudios}" Value="True">
                                                 <Setter TargetName="AudioHost" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasVideoLinks}" Value="True">
+                                                <Setter TargetName="VideoLinksHost" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding HasOverflowVideoLinks}" Value="True">
+                                                <Setter TargetName="VideoLinksHost" Property="Visibility" Value="Visible" />
                                             </DataTrigger>
 
                                             <DataTrigger Binding="{Binding HasSingleImage}" Value="True">
