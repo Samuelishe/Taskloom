@@ -33,6 +33,16 @@ public sealed class CalendarRecordDraft
     public string? Details { get; set; }
 
     /// <summary>
+    /// Порядок записи внутри выбранной даты.
+    /// </summary>
+    public int SortOrder { get; set; }
+
+    /// <summary>
+    /// Нужно ли скрывать отдельные video links в описании, если для них показано preview.
+    /// </summary>
+    public bool HideLinksWhenPreviewAvailable { get; set; }
+
+    /// <summary>
     /// Изображения записи.
     /// </summary>
     public List<RecordImageDraft> Images { get; set; } = [];

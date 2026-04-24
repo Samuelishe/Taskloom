@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS calendar_records
     record_date TEXT NOT NULL,
     title TEXT NOT NULL,
     details TEXT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    hide_links_when_preview_available INTEGER NOT NULL DEFAULT 0,
     created_utc TEXT NOT NULL,
     is_completed INTEGER NULL,
     task_reminder_time TEXT NULL,
@@ -18,6 +20,8 @@ CREATE TABLE IF NOT EXISTS calendar_records
     CHECK (length(title) <= 200),
     CHECK (details IS NULL OR length(details) <= 4000),
     CHECK (length(created_utc) > 0),
+    CHECK (sort_order >= 0),
+    CHECK (hide_links_when_preview_available IN (0, 1)),
     CHECK (location IS NULL OR length(location) <= 300),
     CHECK (is_completed IS NULL OR is_completed IN (0, 1)),
     CHECK (task_reminder_time IS NULL OR length(task_reminder_time) = 5),
@@ -81,6 +85,9 @@ CREATE INDEX IF NOT EXISTS ix_calendar_records_date
 
 CREATE INDEX IF NOT EXISTS ix_calendar_records_date_type
     ON calendar_records(record_date, type_id);
+
+CREATE INDEX IF NOT EXISTS ix_calendar_records_date_sort
+    ON calendar_records(record_date, sort_order, created_utc);
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_calendar_records_day_summary_date
     ON calendar_records(record_date)

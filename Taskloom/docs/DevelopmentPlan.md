@@ -34,10 +34,17 @@
 - [x] Audio attachments и playlist в карточке записи
 - [x] Startup cleanup старых записей и per-record resource folders
 - [x] Базовый link preview pipeline для внешних видео-ссылок
+- [x] Persisted порядок карточек записей и базовый drag-reorder внутри дня
 
 ## Точка продолжения
 
-Следующий рабочий этап: расширение video link preview providers после базового pipeline, затем возврат к отдельному этапу `strip mode`.
+Следующий рабочий этап: полировка drag-reorder карточек записей, swap-feedback и подготовка той же layout-основы к будущему `strip mode`.
+
+Приоритет ближайших этапов теперь такой:
+
+1. Полировка drag-reorder карточек и spatial feedback.
+2. Возврат к отдельному этапу `strip mode`, уже поверх нового порядка и DnD-основы.
+3. Расширение video link preview providers (`Twitch`, `VK Видео`, `RuTube`) после стабилизации card-layout UX.
 
 Перед продолжением новой сессии нужно прочитать:
 
@@ -45,6 +52,34 @@
 - `docs/Architecture.md`
 - `docs/DevelopmentPlan.md`
 - `docs/WorkLog.md`
+
+## Ближайшие приоритеты после текущего среза
+
+### P1. Полировка Drag-Reorder Карточек Записей
+
+- [x] Добавить persisted `sort_order` для записей внутри дня
+- [x] Сохранять новую запись в конец порядка выбранной даты
+- [x] Реализовать drag-start по карточке записи с threshold без конфликта с кнопками и интерактивными элементами
+- [x] Реализовать базовый spatial hit testing по карточкам в wrap-layout
+- [x] Реализовать drop с persisted reorder поверх wrap-layout, без свободного pixel-positioning
+- [x] Пересчитывать порядок карточек после drop и сохранять его в SQLite
+- [ ] Добавить более явный visual feedback: dragged card, drop-target/swap state и безопасный fallback без анимационных артефактов
+- [ ] Добавить автоскролл списка при перетаскивании к верхней и нижней границе
+- [ ] Проверить сценарии с карточками разной высоты, пустотами и ресайзом окна
+
+### P2. Подготовка К Strip Mode Через Общий Layout-Foundation
+
+- [ ] Убедиться, что persisted порядок и drag-reorder не зависят от текущей ширины окна
+- [ ] Подготовить отдельный слой layout-решений, чтобы `strip mode` не дублировал reorder-логику
+- [ ] Перенести спорные решения по spatial drop в переиспользуемые helper/service классы, если это действительно понадобится после первой реализации
+- [ ] После стабилизации reorder определить, нужен ли дополнительный режим вставки между карточками поверх текущего swap-поведения
+
+### P3. Доработка Video Link Preview После Стабилизации Базового Layout UX
+
+- [ ] Добавить отдельный Twitch provider для clips и VOD
+- [ ] Добавить отдельные providers для VK Видео и RuTube
+- [ ] Добавить refresh-policy для уже успешных preview-данных
+- [ ] Ограничить размер скачиваемых thumbnail и усилить защиту от аномальных ответов провайдера
 
 ## Этапы MVP
 
@@ -226,9 +261,11 @@
 - [x] Для YouTube загружать title и thumbnail автоматически, с fallback на placeholder при отсутствии сети
 - [x] Подготовить UI-модель preview-карточки под `description` и `duration`
 - [x] Поддержать optional `TASKLOOM_YOUTUBE_API_KEY` для бесплатного enrichment `description` и `duration`
+- [x] Добавить persisted `sort_order` для записей и ручной drag-reorder карточек внутри дня
+- [ ] Стабилизировать spatial drop-логику карточек с разной высотой
+- [ ] Добавить `strip mode` с горизонтальным drag-scroll внутри контейнера уже поверх persisted порядка карточек
 - [ ] Добавить отдельный Twitch provider для clips и VOD
 - [ ] Добавить отдельные providers для VK Видео и RuTube
-- [ ] Добавить `strip mode` с горизонтальным drag-scroll внутри контейнера
 - [x] Добавить режим сворачивания приложения в трей
 - [x] Добавить tray menu: `Открыть`, `Настройки`, `Выход`
 - [x] Добавить временную иконку приложения и tray icon

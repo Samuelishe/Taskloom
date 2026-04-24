@@ -31,16 +31,44 @@ public sealed class SqliteDatabaseInitializer
         var sql = await File.ReadAllTextAsync(scriptPath, cancellationToken);
 
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
-        var command = new CommandDefinition(sql, cancellationToken: cancellationToken);
-        await connection.ExecuteAsync(command);
+        var hasCalendarRecordsTable = await TableExistsAsync(connection, "calendar_records", cancellationToken);
+
+        if (!hasCalendarRecordsTable)
+        {
+            var command = new CommandDefinition(sql, cancellationToken: cancellationToken);
+            await connection.ExecuteAsync(command);
+        }
+
+        await EnsureColumnAsync(connection, "sort_order", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
+        await EnsureColumnAsync(connection, "hide_links_when_preview_available", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
         await EnsureColumnAsync(connection, "created_utc", "TEXT NULL", cancellationToken);
         await BackfillRecordCreatedUtcAsync(connection, cancellationToken);
+        await BackfillRecordSortOrderAsync(connection, cancellationToken);
         await EnsureColumnAsync(connection, "event_status_id", "INTEGER NULL", cancellationToken);
         await EnsureColumnAsync(connection, "reminder_minutes_before", "INTEGER NULL", cancellationToken);
         await EnsureColumnAsync(connection, "task_reminder_time", "TEXT NULL", cancellationToken);
         await EnsureRecordAttachmentsTableAsync(connection, cancellationToken);
         await EnsureRecordAttachmentsSchemaAsync(connection, cancellationToken);
+        await RecreateCalendarRecordIndexesAsync(connection, cancellationToken);
         await RecreateRecordAttachmentIndexesAsync(connection, cancellationToken);
+    }
+
+    private static async Task<bool> TableExistsAsync(
+        System.Data.IDbConnection connection,
+        string tableName,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+                           SELECT COUNT(1)
+                           FROM sqlite_master
+                           WHERE type = 'table'
+                             AND name = @TableName;
+                           """;
+
+        var count = await connection.ExecuteScalarAsync<long>(
+            new CommandDefinition(sql, new { TableName = tableName }, cancellationToken: cancellationToken));
+
+        return count > 0;
     }
 
     private static async Task EnsureColumnAsync(
@@ -282,5 +310,86 @@ public sealed class SqliteDatabaseInitializer
                            """;
 
         await connection.ExecuteAsync(new CommandDefinition(sql, cancellationToken: cancellationToken));
+    }
+
+    private static async Task RecreateCalendarRecordIndexesAsync(
+        System.Data.IDbConnection connection,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+                           CREATE INDEX IF NOT EXISTS ix_calendar_records_date
+                               ON calendar_records(record_date);
+
+                           CREATE INDEX IF NOT EXISTS ix_calendar_records_date_type
+                               ON calendar_records(record_date, type_id);
+
+                           CREATE INDEX IF NOT EXISTS ix_calendar_records_date_sort
+                               ON calendar_records(record_date, sort_order, created_utc);
+
+                           CREATE UNIQUE INDEX IF NOT EXISTS ux_calendar_records_day_summary_date
+                               ON calendar_records(record_date)
+                               WHERE type_id = 4;
+                           """;
+
+        await connection.ExecuteAsync(new CommandDefinition(sql, cancellationToken: cancellationToken));
+    }
+
+    private static async Task BackfillRecordSortOrderAsync(
+        System.Data.IDbConnection connection,
+        CancellationToken cancellationToken)
+    {
+        const string nonZeroSql = """
+                                  SELECT COUNT(1)
+                                  FROM calendar_records
+                                  WHERE sort_order <> 0;
+                                  """;
+
+        var hasNonZeroSortOrders = await connection.ExecuteScalarAsync<long>(
+            new CommandDefinition(nonZeroSql, cancellationToken: cancellationToken));
+
+        if (hasNonZeroSortOrders > 0)
+        {
+            return;
+        }
+
+        const string totalSql = """
+                                SELECT COUNT(1)
+                                FROM calendar_records;
+                                """;
+
+        var totalCount = await connection.ExecuteScalarAsync<long>(
+            new CommandDefinition(totalSql, cancellationToken: cancellationToken));
+
+        if (totalCount <= 1)
+        {
+            return;
+        }
+
+        const string updateSql = """
+                                 WITH ordered AS
+                                 (
+                                     SELECT
+                                         id,
+                                         ROW_NUMBER() OVER (
+                                             PARTITION BY record_date
+                                             ORDER BY
+                                                 CASE WHEN start_time IS NULL THEN 1 ELSE 0 END,
+                                                 start_time,
+                                                 title,
+                                                 created_utc,
+                                                 id
+                                         ) - 1 AS new_sort_order
+                                     FROM calendar_records
+                                 )
+                                 UPDATE calendar_records
+                                 SET sort_order = (
+                                     SELECT ordered.new_sort_order
+                                     FROM ordered
+                                     WHERE ordered.id = calendar_records.id
+                                 )
+                                 WHERE id IN (SELECT id FROM ordered);
+                                 """;
+
+        await connection.ExecuteAsync(new CommandDefinition(updateSql, cancellationToken: cancellationToken));
     }
 }

@@ -33,6 +33,11 @@ public interface ICalendarRecordRepository
     Task SaveAsync(CalendarRecord record, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Обновляет порядок записей внутри выбранной даты.
+    /// </summary>
+    Task UpdateSortOrdersAsync(DateOnly date, IReadOnlyList<Guid> orderedRecordIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Удаляет запись по идентификатору.
     /// </summary>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);

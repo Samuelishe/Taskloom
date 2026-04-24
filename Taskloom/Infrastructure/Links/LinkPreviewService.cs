@@ -17,6 +17,7 @@ public sealed class LinkPreviewService : ILinkPreviewService
     {
         WriteIndented = true
     };
+    private static readonly TimeSpan FailureRetryDelay = TimeSpan.FromHours(6);
 
     private readonly Dictionary<DetectedLinkKind, ILinkPreviewProvider> _providers;
     private readonly SemaphoreSlim _metadataGate = new(1, 1);
@@ -62,10 +63,15 @@ public sealed class LinkPreviewService : ILinkPreviewService
             return cachedPreview;
         }
 
+        if (ShouldUseRecentFailurePlaceholder(existingEntry))
+        {
+            return CreatePlaceholder(link, existingEntry?.Title, existingEntry?.Description, existingEntry?.DurationText);
+        }
+
         if (!_providers.TryGetValue(link.Kind, out var provider))
         {
             await SaveMetadataEntryAsync(recordId, link, existingEntry?.Title, existingEntry?.Description, existingEntry?.DurationText, null, false, cancellationToken);
-            return CreatePlaceholder(link);
+            return CreatePlaceholder(link, existingEntry?.Title, existingEntry?.Description, existingEntry?.DurationText);
         }
 
         await _networkGate.WaitAsync(cancellationToken);
@@ -77,7 +83,7 @@ public sealed class LinkPreviewService : ILinkPreviewService
             if (fetchResult is null)
             {
                 await SaveMetadataEntryAsync(recordId, link, existingEntry?.Title, existingEntry?.Description, existingEntry?.DurationText, null, false, cancellationToken);
-                return CreatePlaceholder(link, existingEntry?.Title);
+                return CreatePlaceholder(link, existingEntry?.Title, existingEntry?.Description, existingEntry?.DurationText);
             }
 
             var thumbnailAbsolutePath = await DownloadThumbnailAsync(recordId, link, fetchResult, cancellationToken);
@@ -85,7 +91,7 @@ public sealed class LinkPreviewService : ILinkPreviewService
             if (string.IsNullOrWhiteSpace(thumbnailAbsolutePath))
             {
                 await SaveMetadataEntryAsync(recordId, link, fetchResult.Title, fetchResult.Description, fetchResult.DurationText, null, false, cancellationToken);
-                return CreatePlaceholder(link, fetchResult.Title);
+                return CreatePlaceholder(link, fetchResult.Title, fetchResult.Description, fetchResult.DurationText);
             }
 
             var thumbnailRelativePath = Path.GetRelativePath(
@@ -108,7 +114,7 @@ public sealed class LinkPreviewService : ILinkPreviewService
         catch
         {
             await SaveMetadataEntryAsync(recordId, link, existingEntry?.Title, existingEntry?.Description, existingEntry?.DurationText, null, false, cancellationToken);
-            return CreatePlaceholder(link, existingEntry?.Title);
+            return CreatePlaceholder(link, existingEntry?.Title, existingEntry?.Description, existingEntry?.DurationText);
         }
         finally
         {
@@ -116,7 +122,11 @@ public sealed class LinkPreviewService : ILinkPreviewService
         }
     }
 
-    private static LinkPreviewData CreatePlaceholder(DetectedLink link, string? title = null)
+    private static LinkPreviewData CreatePlaceholder(
+        DetectedLink link,
+        string? title = null,
+        string? description = null,
+        string? durationText = null)
     {
         return new LinkPreviewData(
             link.OriginalUrl,
@@ -124,10 +134,17 @@ public sealed class LinkPreviewService : ILinkPreviewService
             CreateFallbackTitle(link, title),
             link.SourceDisplayName,
             link.Kind,
-            null,
-            null,
+            string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
+            string.IsNullOrWhiteSpace(durationText) ? null : durationText.Trim(),
             null,
             false);
+    }
+
+    private static bool ShouldUseRecentFailurePlaceholder(LinkPreviewMetadataEntry? existingEntry)
+    {
+        return existingEntry is not null &&
+               !existingEntry.IsSuccess &&
+               existingEntry.LastAttemptUtc > DateTime.UtcNow - FailureRetryDelay;
     }
 
     private static bool TryCreateCachedPreview(

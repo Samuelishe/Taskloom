@@ -1,4 +1,6 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using Taskloom.Domain;
+using Taskloom.Common.Text;
 using Taskloom.Services.Localization;
 using Taskloom.Services.Links;
 using Taskloom.Services.Media;
@@ -9,7 +11,7 @@ namespace Taskloom.Presentation.ViewModels;
 /// <summary>
 /// Модель элемента списка записей выбранной даты.
 /// </summary>
-public sealed class RecordListItemViewModel : IDisposable
+public sealed partial class RecordListItemViewModel : ObservableObject, IDisposable
 {
     private RecordListItemViewModel(
         Guid id,
@@ -17,6 +19,9 @@ public sealed class RecordListItemViewModel : IDisposable
         string typeDisplayName,
         string title,
         string? details,
+        string? displayDetails,
+        int sortOrder,
+        bool hideLinksWhenPreviewAvailable,
         string timeDisplay,
         bool isCompleted,
         DateTime createdUtc,
@@ -35,6 +40,9 @@ public sealed class RecordListItemViewModel : IDisposable
         TypeDisplayName = typeDisplayName;
         Title = title;
         Details = details;
+        DisplayDetails = displayDetails;
+        SortOrder = sortOrder;
+        HideLinksWhenPreviewAvailable = hideLinksWhenPreviewAvailable;
         TimeDisplay = timeDisplay;
         IsCompleted = isCompleted;
         CreatedUtc = createdUtc;
@@ -60,6 +68,12 @@ public sealed class RecordListItemViewModel : IDisposable
 
     public string? Details { get; }
 
+    public string? DisplayDetails { get; }
+
+    public int SortOrder { get; }
+
+    public bool HideLinksWhenPreviewAvailable { get; }
+
     public string TimeDisplay { get; }
 
     public bool IsCompleted { get; }
@@ -73,6 +87,8 @@ public sealed class RecordListItemViewModel : IDisposable
     public bool IsEvent => Type == RecordType.Event;
 
     public bool HasLocation => !string.IsNullOrWhiteSpace(LocationDisplay);
+
+    public bool HasDisplayDetails => !string.IsNullOrWhiteSpace(DisplayDetails);
 
     public bool HasImages => Images.Count > 0;
 
@@ -136,6 +152,10 @@ public sealed class RecordListItemViewModel : IDisposable
 
     public string? TaskStatusIcon { get; }
 
+    [ObservableProperty]
+    private bool isDropTarget;
+
+
     public void Dispose()
     {
         foreach (var audio in Audios)
@@ -187,6 +207,7 @@ public sealed class RecordListItemViewModel : IDisposable
         var detectedVideoLinks = linkPreviewService.DetectLinks(record.Details)
             .Where(static link => link.IsVideoLink)
             .ToArray();
+        var previewableVideoLinks = new List<DetectedLink>();
 
         var videoPreviewItems = new List<RecordVideoLinkItemViewModel>();
         var overflowVideoLinks = new List<RecordExternalLinkItemViewModel>();
@@ -195,6 +216,7 @@ public sealed class RecordListItemViewModel : IDisposable
         {
             if (videoPreviewItems.Count < 5 && linkPreviewService.CanPreview(link))
             {
+                previewableVideoLinks.Add(link);
                 videoPreviewItems.Add(new RecordVideoLinkItemViewModel(
                     record.Id,
                     link,
@@ -208,6 +230,11 @@ public sealed class RecordListItemViewModel : IDisposable
             overflowVideoLinks.Add(new RecordExternalLinkItemViewModel(link));
         }
 
+        var displayDetails = RecordDetailsDisplayFormatter.Build(
+            record.Details,
+            record.HideLinksWhenPreviewAvailable,
+            previewableVideoLinks);
+
         return record switch
         {
             TaskRecord taskRecord => new RecordListItemViewModel(
@@ -216,6 +243,9 @@ public sealed class RecordListItemViewModel : IDisposable
                 localizationService.GetString("RecordType.Task"),
                 taskRecord.Title,
                 taskRecord.Details,
+                displayDetails,
+                taskRecord.SortOrder,
+                taskRecord.HideLinksWhenPreviewAvailable,
                 localizationService.GetString("RecordList.TaskLabel"),
                 taskRecord.IsCompleted,
                 taskRecord.CreatedUtc,
@@ -237,6 +267,9 @@ public sealed class RecordListItemViewModel : IDisposable
                 localizationService.GetString("RecordType.Note"),
                 noteRecord.Title,
                 noteRecord.Details,
+                displayDetails,
+                noteRecord.SortOrder,
+                noteRecord.HideLinksWhenPreviewAvailable,
                 localizationService.GetString("RecordList.NoteAnyTime"),
                 false,
                 noteRecord.CreatedUtc,
@@ -251,6 +284,9 @@ public sealed class RecordListItemViewModel : IDisposable
                 localizationService.GetString("RecordType.Event"),
                 eventRecord.Title,
                 eventRecord.Details,
+                displayDetails,
+                eventRecord.SortOrder,
+                eventRecord.HideLinksWhenPreviewAvailable,
                 $"{eventRecord.StartTime:HH\\:mm} - {eventRecord.EndTime:HH\\:mm}",
                 false,
                 eventRecord.CreatedUtc,
@@ -270,6 +306,9 @@ public sealed class RecordListItemViewModel : IDisposable
                 localizationService.GetString("RecordType.DaySummary"),
                 summaryRecord.Title,
                 summaryRecord.Details,
+                displayDetails,
+                summaryRecord.SortOrder,
+                summaryRecord.HideLinksWhenPreviewAvailable,
                 localizationService.GetString("RecordList.DaySummaryLabel"),
                 false,
                 summaryRecord.CreatedUtc,

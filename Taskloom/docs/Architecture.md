@@ -177,6 +177,7 @@
 - `DaySummaryRecord` ограничен одной записью на дату через уникальный partial index.
 - Для `EventRecord` на уровне БД зафиксировано наличие `start_time` и `end_time`.
 - Для `TaskRecord` хранятся `is_completed` и nullable `task_reminder_time`.
+- Для всех типов записей в `calendar_records` хранится persisted `sort_order`, который задаёт ручной порядок карточек внутри конкретной даты.
 - Изображения записи хранятся как несколько attachments типа `Image`; порядок отображения задаётся полем `sort_order`.
 - Аудиофайлы записи хранятся как несколько attachments типа `Audio`; для них в `record_attachments` сохраняются `display_title`, `duration_seconds`, `preview_relative_path` и общий `sort_order`.
 
@@ -192,9 +193,12 @@
 - `RecordImageStorageService` импортирует `jpg/jpeg/png/bmp/gif`, возвращает метаданные attachment и сохраняет файлы в каталог конкретной записи.
 - `RecordAudioStorageService` импортирует `mp3/wav/m4a/flac/wma/ogg`, читает title/duration/cover через `TagLibSharp` и сохраняет локальные аудиофайлы и обложки в каталог конкретной записи.
 - `RecordResourceMetadataService` поддерживает metadata-файл `record.json` рядом с ресурсами записи и удаляет каталог записи целиком при полном удалении записи.
-- Presentation-слой пока использует grid layout миниатюр; горизонтальная drag-лента остаётся следующим отдельным UX-этапом.
+- Presentation-слой использует persisted порядок карточек записей и базовый drag-reorder в текущем wrap-layout; drop на карточку означает swap позиций, а не линейную вставку по индексу.
 - Для описания записи используется presentation-only парсинг ссылок: исходный текст `Details` не меняется, а `TextBlock` рендерит `Run/Hyperlink` поверх исходной строки.
-- Для поддерживаемых video links используется отдельный pipeline: классификация ссылки, provider-specific enrichment, локальный thumbnail cache в каталоге записи и fallback на placeholder без падения UI.
+- Для поддерживаемых video links используется отдельный pipeline: классификация ссылки, provider-specific enrichment, локальный thumbnail cache в каталоге записи, cooldown после неудачной загрузки и fallback на placeholder без падения UI.
+- Асинхронное обновление preview-карточек возвращается на UI thread перед изменением bindable-свойств, чтобы не полагаться на неявное поведение WPF при фоновых обновлениях.
+- Для каждой записи хранится отдельный флаг скрытия standalone video links при наличии preview; если он включён, presentation-слой строит display-only версию `Details`, скрывая только строки из одного video URL, уже представленного preview-карточкой.
+- Следующий отдельный шаг после базового reorder — не новая storage-модель, а UX-полировка: swap/drop feedback, автоскролл и дальнейшая подготовка к `strip mode`.
 - Для воспроизведения аудио используется единый `AudioPlaybackService` на базе WPF `MediaPlayer`; карточка записи показывает playlist по audio-attachments, а одновременно играет только один трек.
 
 ### Почему так

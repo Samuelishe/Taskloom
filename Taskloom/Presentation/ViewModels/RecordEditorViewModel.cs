@@ -69,6 +69,9 @@ public partial class RecordEditorViewModel : ObservableObject
     private string? details;
 
     [ObservableProperty]
+    private bool hideLinksWhenPreviewAvailable;
+
+    [ObservableProperty]
     private bool isCompleted;
 
     [ObservableProperty]
@@ -196,6 +199,7 @@ public partial class RecordEditorViewModel : ObservableObject
             Date = draft.Date,
             Title = draft.Title,
             Details = draft.Details,
+            HideLinksWhenPreviewAvailable = draft.HideLinksWhenPreviewAvailable,
             IsCompleted = draft.IsCompleted,
             TaskReminderTime = draft.TaskReminderTime,
             HasTaskReminder = draft.TaskReminderTime is not null,
@@ -224,6 +228,7 @@ public partial class RecordEditorViewModel : ObservableObject
             Date = Date,
             Title = Title,
             Details = Details,
+            HideLinksWhenPreviewAvailable = HideLinksWhenPreviewAvailable,
             Images = Images.Select(CloneImageDraft).ToList(),
             Audios = Audios.Select(CloneAudioDraft).ToList(),
             IsCompleted = IsCompleted,

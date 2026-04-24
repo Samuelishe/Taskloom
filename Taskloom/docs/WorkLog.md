@@ -1,5 +1,52 @@
 # Журнал работ
 
+## 2026-04-24 - Persisted порядок карточек и drag-reorder записей
+
+### Что сделано
+
+- В `calendar_records` добавлено persisted-поле `sort_order` для ручного порядка записей внутри дня.
+- Для существующих данных добавлен backfill `sort_order`, чтобы после миграции сохранить прежний визуальный порядок записей.
+- Исправлена миграция старых локальных БД: индекс по `sort_order` больше не создаётся раньше добавления самой колонки, поэтому старые базы не падают на startup с `no such column: sort_order`.
+- Новая запись теперь получает следующий `sort_order` в конце выбранного дня; при обычном редактировании порядок не сбрасывается.
+- Добавлен прикладной сценарий `ReorderAsync`, который меняет местами две записи внутри дня и сохраняет новый порядок в SQLite отдельной операцией без пересборки самой записи.
+- В главном окне реализован базовый drag-reorder карточек: запись можно перетащить мышкой на другую карточку, и они поменяются местами.
+- Перестановка работает поверх текущего карточного wrap-layout и не требует свободного pixel-positioning или линейной `insert`-логики.
+- После drop список перезагружается из БД уже в новом persisted порядке, а `Taskloom.exe` собирается штатным образом без отключения apphost.
+
+### Изменённые и созданные файлы
+
+- `README.md`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Data/Models/CalendarRecordDataModel.cs`
+- `Taskloom/Data/Sql/CreateSchema.sql`
+- `Taskloom/Domain/CalendarRecord.cs`
+- `Taskloom/Domain/DaySummaryRecord.cs`
+- `Taskloom/Domain/EventRecord.cs`
+- `Taskloom/Domain/NoteRecord.cs`
+- `Taskloom/Domain/TaskRecord.cs`
+- `Taskloom/Infrastructure/Repositories/SqliteCalendarRecordRepository.cs`
+- `Taskloom/Infrastructure/Storage/SqliteDatabaseInitializer.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/Services/Records/CalendarRecordDraft.cs`
+- `Taskloom/Services/Records/CalendarRecordService.cs`
+- `Taskloom/Services/Records/ICalendarRecordRepository.cs`
+- `Taskloom/Services/Records/ICalendarRecordService.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Ручной порядок карточек сильнее влияет на ежедневный UX, чем следующий виток enrichment для внешних video providers.
+- Persisted `sort_order` даёт устойчивую основу и для будущего `strip mode`, и для дальнейших spatial-layout экспериментов без перехода к свободным пиксельным координатам.
+- Выделенный сценарий reorder через repository/service слой надёжнее, чем попытка сохранять перестановку косвенно через обычный edit/save flow.
+
 ## 2026-04-24 - Базовый pipeline video link preview
 
 ### Что сделано
@@ -11,9 +58,11 @@
 - Модель и UI preview-карточки расширены под `description` и `duration`, чтобы следующий шаг с API-провайдерами не требовал заново перестраивать layout.
 - Для YouTube добавлена бесплатная optional-интеграция через `TASKLOOM_YOUTUBE_API_KEY`: при наличии ключа карточка может получать `description` и `duration` из официального YouTube Data API.
 - Для YouTube добавлен HTML-fallback без ключа: если `oEmbed` не вернул title, провайдер пытается прочитать `og:title`, `<title>`, `ld+json`, `ytInitialPlayerResponse` и `og:description` из публичной страницы видео.
-- Для YouTube preview добавлен fallback на placeholder без блокировки UI; если thumbnail не удалось получить, карточка остаётся кликабельной и повторит попытку на следующей загрузке.
+- Для YouTube preview добавлен fallback на placeholder без блокировки UI; если thumbnail не удалось получить, карточка остаётся кликабельной, сохраняет уже найденные `title/description/duration` и повторит сетевую попытку только после cooldown.
 - Preview-карточки видео выводятся в горизонтальной ленте и ограничены первыми пятью элементами.
 - Видео-ссылки сверх лимита или без активного provider показываются ниже отдельным текстовым списком, без попытки раздувать карточку.
+- В редактор записи добавлен флаг `скрывать ссылки при наличии превью`; по умолчанию он выключен и хранится как часть самой записи.
+- Если флаг включён, в карточке записи скрываются только standalone-строки, состоящие из одного video URL, для которого реально показана preview-карточка; исходный текст записи в БД не меняется.
 - Thumbnail preview сохраняются в `%LocalAppData%\\Taskloom\\Records\\<record-id>\\link-previews`, а metadata — в `%LocalAppData%\\Taskloom\\Records\\<record-id>\\link-previews.json`.
 - Открытие preview и overflow-ссылок идёт через системный браузер.
 

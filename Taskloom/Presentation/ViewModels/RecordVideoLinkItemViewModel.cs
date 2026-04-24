@@ -86,26 +86,45 @@ public sealed partial class RecordVideoLinkItemViewModel : ObservableObject
         try
         {
             var preview = await _linkPreviewService.GetOrRefreshPreviewAsync(_recordId, _link, cancellationToken);
-            Title = preview.Title;
-            ThumbnailPath = preview.ThumbnailPath;
-            HasThumbnail = preview.HasThumbnail;
-            Description = preview.Description;
-            DurationText = preview.DurationText;
-            ToolTipText = preview.CanonicalUrl;
-
-            if (!preview.HasThumbnail && string.IsNullOrWhiteSpace(Title))
+            await ApplyOnUiThreadAsync(() =>
             {
-                Title = _placeholderTitle;
-            }
+                Title = preview.Title;
+                ThumbnailPath = preview.ThumbnailPath;
+                HasThumbnail = preview.HasThumbnail;
+                Description = preview.Description;
+                DurationText = preview.DurationText;
+                ToolTipText = preview.CanonicalUrl;
+
+                if (!preview.HasThumbnail && string.IsNullOrWhiteSpace(Title))
+                {
+                    Title = _placeholderTitle;
+                }
+            });
         }
         catch
         {
-            Title = _placeholderTitle;
-            ThumbnailPath = null;
-            HasThumbnail = false;
-            Description = null;
-            DurationText = null;
-            ToolTipText = _link.OriginalUrl;
+            await ApplyOnUiThreadAsync(() =>
+            {
+                Title = _placeholderTitle;
+                ThumbnailPath = null;
+                HasThumbnail = false;
+                Description = null;
+                DurationText = null;
+                ToolTipText = _link.OriginalUrl;
+            });
         }
+    }
+
+    private static Task ApplyOnUiThreadAsync(Action action)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        return dispatcher.InvokeAsync(action).Task;
     }
 }

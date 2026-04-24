@@ -7,13 +7,23 @@ public abstract class CalendarRecord
 {
     private List<RecordAttachment> _attachments = [];
 
-    protected CalendarRecord(Guid id, RecordType type, DateOnly date, string title, string? details, DateTime? createdUtc = null)
+    protected CalendarRecord(
+        Guid id,
+        RecordType type,
+        DateOnly date,
+        string title,
+        string? details,
+        int sortOrder = 0,
+        bool hideLinksWhenPreviewAvailable = false,
+        DateTime? createdUtc = null)
     {
         Id = id == Guid.Empty ? Guid.NewGuid() : id;
         Type = type;
         Date = date;
         Title = NormalizeRequiredText(title, nameof(title), 200);
         Details = NormalizeOptionalText(details, 4000);
+        SortOrder = NormalizeSortOrder(sortOrder);
+        HideLinksWhenPreviewAvailable = hideLinksWhenPreviewAvailable;
         CreatedUtc = NormalizeUtc(createdUtc ?? DateTime.UtcNow);
     }
 
@@ -26,6 +36,10 @@ public abstract class CalendarRecord
     public string Title { get; private set; }
 
     public string? Details { get; private set; }
+
+    public int SortOrder { get; private set; }
+
+    public bool HideLinksWhenPreviewAvailable { get; private set; }
 
     public DateTime CreatedUtc { get; }
 
@@ -58,6 +72,16 @@ public abstract class CalendarRecord
     public void ChangeDetails(string? details)
     {
         Details = NormalizeOptionalText(details, 4000);
+    }
+
+    public void SetSortOrder(int value)
+    {
+        SortOrder = NormalizeSortOrder(value);
+    }
+
+    public void SetHideLinksWhenPreviewAvailable(bool value)
+    {
+        HideLinksWhenPreviewAvailable = value;
     }
 
     public void ReplaceAttachments(IEnumerable<RecordAttachment>? attachments)
@@ -117,5 +141,15 @@ public abstract class CalendarRecord
         return value.Kind == DateTimeKind.Utc
             ? value
             : value.ToUniversalTime();
+    }
+
+    private static int NormalizeSortOrder(int value)
+    {
+        if (value < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(value), "Порядок записи не может быть отрицательным.");
+        }
+
+        return value;
     }
 }

@@ -37,6 +37,11 @@ public interface ICalendarRecordService
     Task<TaskRecord> ToggleTaskCompletionAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Меняет местами две записи внутри дня.
+    /// </summary>
+    Task ReorderAsync(DateOnly date, Guid draggedRecordId, Guid targetRecordId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Выполняет автоматическую очистку старых записей по выбранной политике.
     /// </summary>
     Task<int> CleanupOldRecordsAsync(RecordCleanupMode cleanupMode, CancellationToken cancellationToken = default);

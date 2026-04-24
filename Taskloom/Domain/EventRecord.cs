@@ -15,8 +15,10 @@ public sealed class EventRecord : CalendarRecord
         string? location = null,
         EventStatus status = EventStatus.Scheduled,
         int reminderMinutesBefore = 60,
+        int sortOrder = 0,
+        bool hideLinksWhenPreviewAvailable = false,
         DateTime? createdUtc = null)
-        : base(id, RecordType.Event, date, title, details, createdUtc)
+        : base(id, RecordType.Event, date, title, details, sortOrder, hideLinksWhenPreviewAvailable, createdUtc)
     {
         SetSchedule(startTime, endTime);
         Location = NormalizeOptionalText(location, 300);

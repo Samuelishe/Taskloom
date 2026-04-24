@@ -31,6 +31,16 @@ public sealed class CalendarRecordDataModel
     public string? Details { get; set; }
 
     /// <summary>
+    /// Порядок записи внутри выбранной даты.
+    /// </summary>
+    public int SortOrder { get; set; }
+
+    /// <summary>
+    /// Нужно ли скрывать отдельные video links в описании при наличии preview.
+    /// </summary>
+    public bool HideLinksWhenPreviewAvailable { get; set; }
+
+    /// <summary>
     /// Момент создания записи в формате ISO 8601 UTC.
     /// </summary>
     public string CreatedUtc { get; set; } = string.Empty;

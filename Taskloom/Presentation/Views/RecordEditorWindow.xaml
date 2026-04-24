@@ -120,6 +120,11 @@
                     TextWrapping="Wrap"
                     VerticalScrollBarVisibility="Auto"
                     Text="{Binding Details, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <CheckBox
+                    Margin="0,10,0,0"
+                    Content="{markup:Loc Editor.HideLinksWhenPreviewAvailable}"
+                    Foreground="{DynamicResource App.TextPrimaryBrush}"
+                    IsChecked="{Binding HideLinksWhenPreviewAvailable, Mode=TwoWay}" />
             </StackPanel>
 
             <Border Grid.Row="4" Margin="0,18,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="15">

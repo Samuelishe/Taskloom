@@ -3,7 +3,9 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using Taskloom.Common.Windowing;
 using Taskloom.Infrastructure.Storage;
 using Taskloom.Presentation.ViewModels;
@@ -17,6 +19,9 @@ public partial class MainWindow : Window
     private bool _isWindowPlacementSaved;
     private bool _isApplicationExitRequested;
     private bool _isHidingToTray;
+    private System.Windows.Point? _recordDragStartPoint;
+    private RecordListItemViewModel? _dragCandidateRecord;
+    private RecordListItemViewModel? _activeDropTargetRecord;
 
     public MainWindow()
     {
@@ -207,6 +212,117 @@ public partial class MainWindow : Window
         if (e.ButtonState == MouseButtonState.Pressed)
         {
             DragMove();
+        }
+    }
+
+    private void RecordsList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _recordDragStartPoint = e.GetPosition(RecordsList);
+        _dragCandidateRecord = TryGetRecordFromSource(e.OriginalSource as DependencyObject);
+    }
+
+    private void RecordsList_OnPreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed ||
+            _recordDragStartPoint is null ||
+            _dragCandidateRecord is null)
+        {
+            return;
+        }
+
+        var currentPoint = e.GetPosition(RecordsList);
+        var offset = currentPoint - _recordDragStartPoint.Value;
+
+        if (Math.Abs(offset.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(offset.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        var source = e.OriginalSource as DependencyObject;
+
+        if (source is null ||
+            FindSelectionPreservingElement(source) is not null ||
+            FindInteractiveAudioElement(source) is not null ||
+            FindAncestor<TextElement>(source) is not null)
+        {
+            return;
+        }
+
+        var dragRecord = _dragCandidateRecord;
+        _recordDragStartPoint = null;
+        _dragCandidateRecord = null;
+
+        try
+        {
+            DragDrop.DoDragDrop(
+                RecordsList,
+                new System.Windows.DataObject(typeof(RecordListItemViewModel), dragRecord),
+                System.Windows.DragDropEffects.Move);
+        }
+        finally
+        {
+            ClearDropTargetState();
+        }
+    }
+
+    private void RecordsList_OnDragOver(object sender, System.Windows.DragEventArgs e)
+    {
+        var draggedRecord = TryGetDraggedRecord(e);
+
+        if (draggedRecord is null)
+        {
+            e.Effects = System.Windows.DragDropEffects.None;
+            ClearDropTargetState();
+            e.Handled = true;
+            return;
+        }
+
+        if (!TryResolveDropTarget(e.OriginalSource as DependencyObject, out var targetRecord) ||
+            targetRecord is null ||
+            targetRecord.Id == draggedRecord.Id)
+        {
+            e.Effects = System.Windows.DragDropEffects.None;
+            ClearDropTargetState();
+            e.Handled = true;
+            return;
+        }
+
+        SetDropTargetState(targetRecord);
+        e.Effects = System.Windows.DragDropEffects.Move;
+        e.Handled = true;
+    }
+
+    private async void RecordsList_OnDrop(object sender, System.Windows.DragEventArgs e)
+    {
+        try
+        {
+            var draggedRecord = TryGetDraggedRecord(e);
+
+            if (draggedRecord is null ||
+                DataContext is not MainWindowViewModel viewModel ||
+                !TryResolveDropTarget(e.OriginalSource as DependencyObject, out var targetRecord) ||
+                targetRecord is null ||
+                draggedRecord.Id == targetRecord.Id)
+            {
+                return;
+            }
+
+            await viewModel.ReorderRecordAsync(draggedRecord, targetRecord);
+        }
+        finally
+        {
+            ClearDropTargetState();
+            _recordDragStartPoint = null;
+            _dragCandidateRecord = null;
+        }
+    }
+
+    private void RecordsList_OnDragLeave(object sender, System.Windows.DragEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source || FindAncestor<System.Windows.Controls.ListBox>(source) is null)
+        {
+            ClearDropTargetState();
         }
     }
 
@@ -480,6 +596,57 @@ public partial class MainWindow : Window
         return null;
     }
 
+    private RecordListItemViewModel? TryGetRecordFromSource(DependencyObject? source)
+    {
+        var container = FindAncestor<ListBoxItem>(source);
+        return container?.DataContext as RecordListItemViewModel;
+    }
+
+    private static RecordListItemViewModel? TryGetDraggedRecord(System.Windows.DragEventArgs e)
+    {
+        return e.Data.GetData(typeof(RecordListItemViewModel)) as RecordListItemViewModel;
+    }
+
+    private bool TryResolveDropTarget(
+        DependencyObject? source,
+        out RecordListItemViewModel? targetRecord)
+    {
+        targetRecord = null;
+
+        var container = FindAncestor<ListBoxItem>(source);
+
+        if (container?.DataContext is RecordListItemViewModel record)
+        {
+            targetRecord = record;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void SetDropTargetState(RecordListItemViewModel targetRecord)
+    {
+        if (_activeDropTargetRecord == targetRecord)
+        {
+            return;
+        }
+
+        ClearDropTargetState();
+        _activeDropTargetRecord = targetRecord;
+        _activeDropTargetRecord.IsDropTarget = true;
+    }
+
+    private void ClearDropTargetState()
+    {
+        if (_activeDropTargetRecord is null)
+        {
+            return;
+        }
+
+        _activeDropTargetRecord.IsDropTarget = false;
+        _activeDropTargetRecord = null;
+    }
+
     private static Slider? ResolveSlider(DependencyObject? source)
     {
         while (source is not null)
@@ -515,7 +682,27 @@ public partial class MainWindow : Window
                 return target;
             }
 
-            source = VisualTreeHelper.GetParent(source);
+            source = GetParentObject(source);
+        }
+
+        return null;
+    }
+
+    private static DependencyObject? GetParentObject(DependencyObject source)
+    {
+        if (source is Visual || source is Visual3D)
+        {
+            return VisualTreeHelper.GetParent(source);
+        }
+
+        if (source is FrameworkContentElement frameworkContentElement)
+        {
+            return frameworkContentElement.Parent;
+        }
+
+        if (source is ContentElement contentElement)
+        {
+            return ContentOperations.GetParent(contentElement);
         }
 
         return null;

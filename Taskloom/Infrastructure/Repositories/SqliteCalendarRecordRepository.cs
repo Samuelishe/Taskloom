@@ -29,6 +29,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date AS Date,
                                title AS Title,
                                details AS Details,
+                               sort_order AS SortOrder,
+                               hide_links_when_preview_available AS HideLinksWhenPreviewAvailable,
                                created_utc AS CreatedUtc,
                                is_completed AS IsCompleted,
                                task_reminder_time AS TaskReminderTime,
@@ -68,6 +70,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date AS Date,
                                title AS Title,
                                details AS Details,
+                               sort_order AS SortOrder,
+                               hide_links_when_preview_available AS HideLinksWhenPreviewAvailable,
                                created_utc AS CreatedUtc,
                                is_completed AS IsCompleted,
                                task_reminder_time AS TaskReminderTime,
@@ -80,9 +84,12 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                            WHERE record_date = @Date
                              AND (@TypeId IS NULL OR type_id = @TypeId)
                            ORDER BY
+                               sort_order,
                                CASE WHEN start_time IS NULL THEN 1 ELSE 0 END,
                                start_time,
-                               title;
+                               title,
+                               created_utc,
+                               id;
                            """;
 
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
@@ -114,6 +121,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date AS Date,
                                title AS Title,
                                details AS Details,
+                               sort_order AS SortOrder,
+                               hide_links_when_preview_available AS HideLinksWhenPreviewAvailable,
                                created_utc AS CreatedUtc,
                                is_completed AS IsCompleted,
                                task_reminder_time AS TaskReminderTime,
@@ -124,7 +133,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                reminder_minutes_before AS ReminderMinutesBefore
                            FROM calendar_records
                            WHERE record_date < @CutoffDate
-                           ORDER BY record_date, title;
+                           ORDER BY record_date, sort_order, created_utc, title;
                            """;
 
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
@@ -153,6 +162,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date,
                                title,
                                details,
+                               sort_order,
+                               hide_links_when_preview_available,
                                created_utc,
                                is_completed,
                                task_reminder_time,
@@ -169,6 +180,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                @Date,
                                @Title,
                                @Details,
+                               @SortOrder,
+                               @HideLinksWhenPreviewAvailable,
                                @CreatedUtc,
                                @IsCompleted,
                                @TaskReminderTime,
@@ -183,6 +196,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date = excluded.record_date,
                                title = excluded.title,
                                details = excluded.details,
+                               sort_order = excluded.sort_order,
+                               hide_links_when_preview_available = excluded.hide_links_when_preview_available,
                                created_utc = excluded.created_utc,
                                is_completed = excluded.is_completed,
                                task_reminder_time = excluded.task_reminder_time,
@@ -269,6 +284,65 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
     }
 
     /// <inheritdoc />
+    public async Task UpdateSortOrdersAsync(DateOnly date, IReadOnlyList<Guid> orderedRecordIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(orderedRecordIds);
+
+        if (orderedRecordIds.Count == 0)
+        {
+            return;
+        }
+
+        const string readSql = """
+                               SELECT id
+                               FROM calendar_records
+                               WHERE record_date = @Date;
+                               """;
+
+        const string updateSql = """
+                                 UPDATE calendar_records
+                                 SET sort_order = @SortOrder
+                                 WHERE id = @Id
+                                   AND record_date = @Date;
+                                 """;
+
+        await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var existingIds = (await connection.QueryAsync<string>(
+            new CommandDefinition(
+                readSql,
+                new { Date = date.ToString("yyyy-MM-dd") },
+                cancellationToken: cancellationToken)))
+            .Select(Guid.Parse)
+            .ToArray();
+
+        if (existingIds.Length != orderedRecordIds.Count ||
+            existingIds.Except(orderedRecordIds).Any() ||
+            orderedRecordIds.Except(existingIds).Any())
+        {
+            throw new InvalidOperationException("Нельзя сохранить порядок: состав записей выбранной даты изменился.");
+        }
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        for (var index = 0; index < orderedRecordIds.Count; index++)
+        {
+            await connection.ExecuteAsync(
+                new CommandDefinition(
+                    updateSql,
+                    new
+                    {
+                        Id = orderedRecordIds[index].ToString("D"),
+                        Date = date.ToString("yyyy-MM-dd"),
+                        SortOrder = index
+                    },
+                    transaction,
+                    cancellationToken: cancellationToken));
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         const string deleteAttachmentsSql = """
@@ -304,6 +378,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 dataModel.Details,
                 dataModel.IsCompleted ?? false,
                 ParseOptionalTime(dataModel.TaskReminderTime),
+                dataModel.SortOrder,
+                dataModel.HideLinksWhenPreviewAvailable,
                 ParseRequiredUtc(dataModel.CreatedUtc)),
 
             RecordType.Note => new NoteRecord(
@@ -311,6 +387,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 date,
                 dataModel.Title,
                 dataModel.Details,
+                dataModel.SortOrder,
+                dataModel.HideLinksWhenPreviewAvailable,
                 ParseRequiredUtc(dataModel.CreatedUtc)),
 
             RecordType.Event => new EventRecord(
@@ -323,6 +401,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 dataModel.Location,
                 (EventStatus)(dataModel.EventStatusId ?? (int)EventStatus.Scheduled),
                 dataModel.ReminderMinutesBefore ?? 60,
+                dataModel.SortOrder,
+                dataModel.HideLinksWhenPreviewAvailable,
                 ParseRequiredUtc(dataModel.CreatedUtc)),
 
             RecordType.DaySummary => new DaySummaryRecord(
@@ -330,6 +410,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 date,
                 dataModel.Title,
                 dataModel.Details,
+                dataModel.SortOrder,
+                dataModel.HideLinksWhenPreviewAvailable,
                 ParseRequiredUtc(dataModel.CreatedUtc)),
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {dataModel.TypeId}.")
@@ -345,6 +427,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
             Date = record.Date.ToString("yyyy-MM-dd"),
             Title = record.Title,
             Details = record.Details,
+            SortOrder = record.SortOrder,
+            HideLinksWhenPreviewAvailable = record.HideLinksWhenPreviewAvailable,
             CreatedUtc = record.CreatedUtc.ToString("O")
         };
 

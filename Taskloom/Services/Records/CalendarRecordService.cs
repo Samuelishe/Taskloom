@@ -121,6 +121,50 @@ public sealed class CalendarRecordService : ICalendarRecordService
     }
 
     /// <inheritdoc />
+    public async Task ReorderAsync(
+        DateOnly date,
+        Guid draggedRecordId,
+        Guid targetRecordId,
+        CancellationToken cancellationToken = default)
+    {
+        if (draggedRecordId == Guid.Empty || targetRecordId == Guid.Empty)
+        {
+            throw new InvalidOperationException("Для перестановки записей требуются корректные идентификаторы.");
+        }
+
+        if (draggedRecordId == targetRecordId)
+        {
+            return;
+        }
+
+        var records = (await _repository.GetByDateAsync(date, null, cancellationToken)).ToList();
+        var draggedRecord = records.FirstOrDefault(record => record.Id == draggedRecordId);
+        var targetRecord = records.FirstOrDefault(record => record.Id == targetRecordId);
+
+        if (draggedRecord is null || targetRecord is null)
+        {
+            throw new InvalidOperationException("Не удалось переставить записи: одна из записей больше не найдена в выбранном дне.");
+        }
+
+        var draggedIndex = records.FindIndex(record => record.Id == draggedRecordId);
+        var targetIndex = records.FindIndex(record => record.Id == targetRecordId);
+
+        if (draggedIndex < 0 || targetIndex < 0)
+        {
+            throw new InvalidOperationException("Не удалось переставить записи: одна из позиций больше не найдена.");
+        }
+
+        (records[draggedIndex], records[targetIndex]) = (records[targetIndex], records[draggedIndex]);
+
+        for (var index = 0; index < records.Count; index++)
+        {
+            records[index].SetSortOrder(index);
+        }
+
+        await _repository.UpdateSortOrdersAsync(date, records.Select(record => record.Id).ToArray(), cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<int> CleanupOldRecordsAsync(RecordCleanupMode cleanupMode, CancellationToken cancellationToken = default)
     {
         if (cleanupMode == RecordCleanupMode.Never)
@@ -157,6 +201,7 @@ public sealed class CalendarRecordService : ICalendarRecordService
         CancellationToken cancellationToken)
     {
         var id = draft.Id ?? Guid.NewGuid();
+        var sortOrder = await ResolveSortOrderAsync(draft, existingRecord, cancellationToken);
 
         CalendarRecord record = draft.Type switch
         {
@@ -167,6 +212,8 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 draft.Details,
                 draft.IsCompleted,
                 draft.TaskReminderTime,
+                sortOrder,
+                draft.HideLinksWhenPreviewAvailable,
                 existingRecord?.CreatedUtc),
 
             RecordType.Note => new NoteRecord(
@@ -174,6 +221,8 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 draft.Date,
                 draft.Title,
                 draft.Details,
+                sortOrder,
+                draft.HideLinksWhenPreviewAvailable,
                 existingRecord?.CreatedUtc),
 
             RecordType.Event => new EventRecord(
@@ -186,6 +235,8 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 draft.Location,
                 draft.EventStatus,
                 draft.ReminderMinutesBefore,
+                sortOrder,
+                draft.HideLinksWhenPreviewAvailable,
                 existingRecord?.CreatedUtc),
 
             RecordType.DaySummary => new DaySummaryRecord(
@@ -193,6 +244,8 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 draft.Date,
                 draft.Title,
                 draft.Details,
+                sortOrder,
+                draft.HideLinksWhenPreviewAvailable,
                 existingRecord?.CreatedUtc),
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {draft.Type}.")
@@ -238,6 +291,8 @@ public sealed class CalendarRecordService : ICalendarRecordService
             Date = record.Date,
             Title = record.Title,
             Details = record.Details,
+            SortOrder = record.SortOrder,
+            HideLinksWhenPreviewAvailable = record.HideLinksWhenPreviewAvailable,
             Images = record.ImageAttachments.Select(MapImageToDraft).ToList(),
             Audios = record.AudioAttachments.Select(MapAudioToDraft).ToList()
         };
@@ -265,6 +320,26 @@ public sealed class CalendarRecordService : ICalendarRecordService
     {
         return value ?? throw new InvalidOperationException(
             $"Для записи типа Event обязательно значение {propertyName}.");
+    }
+
+    private async Task<int> ResolveSortOrderAsync(
+        CalendarRecordDraft draft,
+        CalendarRecord? existingRecord,
+        CancellationToken cancellationToken)
+    {
+        if (existingRecord is not null && existingRecord.Date == draft.Date)
+        {
+            return existingRecord.SortOrder;
+        }
+
+        var recordsForDate = await _repository.GetByDateAsync(draft.Date, null, cancellationToken);
+
+        if (recordsForDate.Count == 0)
+        {
+            return 0;
+        }
+
+        return recordsForDate.Max(record => record.SortOrder) + 1;
     }
 
     private async Task<(List<RecordAttachment> Attachments, List<string> ImportedRelativePaths)> ResolveImageAttachmentsAsync(

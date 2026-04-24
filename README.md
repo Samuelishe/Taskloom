@@ -99,9 +99,11 @@ Links are opened through the system handler.
 - YouTube links in record descriptions can show cached title + thumbnail previews directly in the record card
 - Preview cards are limited to five items; additional video links fall back to a simple text list
 - If YouTube `oEmbed` does not return a title, Taskloom tries to parse the public video page as a fallback before using a neutral placeholder
+- Records can optionally hide standalone video-link lines when a preview card is shown, without modifying the original saved note text
 - With optional `TASKLOOM_YOUTUBE_API_KEY`, YouTube previews can also show description and duration using the free official API quota
 - The general link preview pipeline already classifies `YouTube`, `Twitch`, `VK Видео`, and `RuTube` links for future provider-specific enrichment
 - Video preview thumbnails are cached per record under `%LocalAppData%\\Taskloom\\Records\\<record-id>\\link-previews`
+- Failed preview fetches use cooldown-based retry instead of hammering the network on every card render
 
 ### 🎨 Theming and UX
 - Built-in light, dark, OS-inspired, and custom themes
@@ -110,6 +112,8 @@ Links are opened through the system handler.
 - Instant-apply settings for theme, language, and cleanup policy
 - Themed in-app confirmation dialogs instead of default system message boxes
 - Adaptive record card layout
+- Manual drag-reorder of record cards within the selected day, with persisted order
+- Drag-and-drop reorder currently swaps cards by target position, which keeps behavior intuitive across wrap rows
 - Compact created-time badge on every record card
 - Click empty space to clear record selection
 - Tray mode for background operation
@@ -229,5 +233,6 @@ Taskloom is already functional as a personal desktop organizer and continues to 
 The current focus is on:
 
 - stability and edge-case hardening
-- richer attachment UX
+- refinement of record-card layout and drag-reorder UX
+- richer attachment and link preview UX
 - continued refinement of the calendar-centered workflow

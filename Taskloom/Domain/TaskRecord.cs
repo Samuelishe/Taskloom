@@ -12,8 +12,10 @@ public sealed class TaskRecord : CalendarRecord
         string? details,
         bool isCompleted = false,
         TimeOnly? reminderTime = null,
+        int sortOrder = 0,
+        bool hideLinksWhenPreviewAvailable = false,
         DateTime? createdUtc = null)
-        : base(id, RecordType.Task, date, title, details, createdUtc)
+        : base(id, RecordType.Task, date, title, details, sortOrder, hideLinksWhenPreviewAvailable, createdUtc)
     {
         IsCompleted = isCompleted;
         ReminderTime = reminderTime;

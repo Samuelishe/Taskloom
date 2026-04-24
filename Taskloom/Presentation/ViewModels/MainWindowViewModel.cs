@@ -140,6 +140,20 @@ public partial class MainWindowViewModel : ObservableObject
         return LoadRecordsAsync(cancellationToken);
     }
 
+    public async Task ReorderRecordAsync(
+        RecordListItemViewModel draggedRecord,
+        RecordListItemViewModel targetRecord,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(draggedRecord);
+        ArgumentNullException.ThrowIfNull(targetRecord);
+
+        await _recordService.ReorderAsync(SelectedDate, draggedRecord.Id, targetRecord.Id, cancellationToken);
+        await LoadRecordsAsync(cancellationToken);
+        SelectedRecord = Records.FirstOrDefault(item => item.Id == draggedRecord.Id);
+        StatusText = _localizationService.GetString("MainWindow.Status.RecordOrderChanged");
+    }
+
     public void SeekAudio(RecordAudioListItemViewModel? item, double seconds)
     {
         if (item is null || string.IsNullOrWhiteSpace(item.Path))
