@@ -9,6 +9,10 @@
   Tasks, notes, events, day summaries, reminders, media attachments, themes, and tray mode in one local desktop app.
 </p>
 
+<p align="center">
+  <img src="Taskloom/Assets/Images/mockup-image.png" alt="Taskloom app mockup" width="980" />
+</p>
+
 ---
 
 ## ✨ What Taskloom Is
