@@ -1,5 +1,66 @@
 # Журнал работ
 
+## 2026-04-24 - Добавлен язык `zh-CN`
+
+### Что сделано
+
+- Добавлен новый файл локализации `Taskloom/Assets/Localization/zh-CN.json`.
+- В окно настроек добавлен третий язык интерфейса `简体中文`.
+- README и проектная документация обновлены так, чтобы `zh-CN` считался поддерживаемым языком наравне с `ru-RU` и `en-US`.
+- Первым китайским вариантом выбран упрощённый китайский, а не традиционный.
+
+### Изменённые файлы
+
+- `Taskloom/Assets/Localization/zh-CN.json`
+- `Taskloom/Presentation/ViewModels/SettingsViewModel.cs`
+- `README.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Для первого китайского языка практичнее брать `zh-CN`: он покрывает более массовый сценарий и обычно ожидается как основной вариант `Chinese` в интерфейсах.
+- Локализационная инфраструктура на JSON-файлах уже расширяема, поэтому добавление третьего языка не требует смены архитектуры.
+
+## 2026-04-24 - Полировка drag-reorder: visual feedback и автоскролл
+
+### Что сделано
+
+- Для карточек записей drag-reorder переведён на временный псевдообмен: при наведении на target карточки визуально меняются местами только как preview от snapshot исходного порядка текущего drag.
+- Запись нового порядка в SQLite выполняется только на drop; если курсор уводится или drag отменяется, preview полностью откатывается к исходному порядку.
+- Spatial hit-testing reorder усилен: target определяется не только по прямому попаданию курсора в карточку, но и по ближайшей геометрии `ListBoxItem`, чтобы drag не терялся в пустотах между карточками и при разной высоте элементов.
+- Убран badge `Обмен/Swap`: при движении через несколько карточек он оставался привязанным к уже неактуальной шаблонной позиции и только мешал чтению preview.
+- Исправлено мигание preview туда-сюда при переходе между карточками: target для псевдообмена теперь определяется по snapshot-геометрии на момент начала drag, а не по уже временно переставленному preview-layout.
+- Производительность preview улучшена: при смене target список больше не проходит через полный restore+swap цикл, а сразу приводится к нужному preview-порядку от snapshot текущего drag.
+- Исправлен сценарий возврата dragged-card “домой”: если курсор снова попадает в исходную snapshot-зону карточки, preview откатывается, а drop в этой точке не фиксирует последний swap.
+- Логика возврата “домой” расширена: preview откатывается и тогда, когда исходная snapshot-зона dragged-card стала просто ближайшей к курсору, даже если курсор ещё не вошёл строго внутрь её прямоугольника.
+- Убран смешанный target-resolution во время drag: если snapshot для preview уже создан, target теперь определяется только по snapshot-геометрии, без fallback на текущий временно изменённый layout.
+- Исправлен crash при быстрых хаотичных drag-сценариях: `FindInteractiveAudioElement` больше не валится на `Run` и других `ContentElement`, потому что обход родителей переведён на общий `GetParentObject`.
+- В presentation-модель карточки добавлен флаг `IsDragSource`, отделённый от уже существующего `IsDropTarget`.
+- Текущая swap-семантика reorder не менялась: визуальная полировка добавлена поверх уже работающего persisted порядка, без новой storage-модели.
+- Для списка записей добавлен автоскролл при перетаскивании карточки к верхней и нижней границе `ScrollViewer`.
+- Обычная сборка `dotnet build .\Taskloom.sln --no-restore` выполнена успешно, а `Taskloom.exe` присутствует в стандартном `bin\\Debug\\net10.0-windows10.0.19041.0`.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- После появления persisted `sort_order` и swap-reorder главным UX-дефицитом стало отсутствие понятного drag-state и неудобство переноса карточек в длинном списке без автоскролла.
+- Эти улучшения усиливают уже принятую модель reorder, не forcing новый layout engine и не создавая дополнительных рисков для SQLite-слоя.
+
 ## 2026-04-24 - Persisted порядок карточек и drag-reorder записей
 
 ### Что сделано

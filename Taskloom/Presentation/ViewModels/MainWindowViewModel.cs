@@ -154,6 +154,59 @@ public partial class MainWindowViewModel : ObservableObject
         StatusText = _localizationService.GetString("MainWindow.Status.RecordOrderChanged");
     }
 
+    public bool PreviewSwapRecordOrder(
+        RecordListItemViewModel draggedRecord,
+        RecordListItemViewModel targetRecord)
+    {
+        ArgumentNullException.ThrowIfNull(draggedRecord);
+        ArgumentNullException.ThrowIfNull(targetRecord);
+
+        var draggedIndex = Records.IndexOf(draggedRecord);
+        var targetIndex = Records.IndexOf(targetRecord);
+
+        if (draggedIndex < 0 || targetIndex < 0 || draggedIndex == targetIndex)
+        {
+            return false;
+        }
+
+        (Records[draggedIndex], Records[targetIndex]) = (Records[targetIndex], Records[draggedIndex]);
+        return true;
+    }
+
+    public void RestorePreviewOrder(IReadOnlyList<Guid> orderedRecordIds)
+    {
+        ApplyPreviewOrder(orderedRecordIds);
+    }
+
+    public void ApplyPreviewOrder(IReadOnlyList<Guid> orderedRecordIds)
+    {
+        ArgumentNullException.ThrowIfNull(orderedRecordIds);
+
+        if (orderedRecordIds.Count == 0 || orderedRecordIds.Count != Records.Count)
+        {
+            return;
+        }
+
+        var itemById = Records.ToDictionary(item => item.Id);
+
+        for (var targetIndex = 0; targetIndex < orderedRecordIds.Count; targetIndex++)
+        {
+            var targetId = orderedRecordIds[targetIndex];
+
+            if (!itemById.TryGetValue(targetId, out var targetItem))
+            {
+                return;
+            }
+
+            var currentIndex = Records.IndexOf(targetItem);
+
+            if (currentIndex >= 0 && currentIndex != targetIndex)
+            {
+                Records.Move(currentIndex, targetIndex);
+            }
+        }
+    }
+
     public void SeekAudio(RecordAudioListItemViewModel? item, double seconds)
     {
         if (item is null || string.IsNullOrWhiteSpace(item.Path))

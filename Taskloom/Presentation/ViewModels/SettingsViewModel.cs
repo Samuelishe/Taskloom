@@ -34,7 +34,8 @@ public partial class SettingsViewModel : ObservableObject
         Languages =
         [
             new LanguageOptionViewModel("ru-RU", "Русский"),
-            new LanguageOptionViewModel("en-US", "English")
+            new LanguageOptionViewModel("en-US", "English"),
+            new LanguageOptionViewModel("zh-CN", "简体中文")
         ];
         RebuildLocalizedOptions();
 

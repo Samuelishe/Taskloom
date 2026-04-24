@@ -22,6 +22,14 @@ public partial class MainWindow : Window
     private System.Windows.Point? _recordDragStartPoint;
     private RecordListItemViewModel? _dragCandidateRecord;
     private RecordListItemViewModel? _activeDropTargetRecord;
+    private RecordListItemViewModel? _activeDragSourceRecord;
+    private ScrollViewer? _recordsScrollViewer;
+    private Guid[]? _dragPreviewOriginalOrderIds;
+    private Guid? _previewTargetRecordId;
+    private Dictionary<Guid, Rect>? _dragPreviewBoundsByRecordId;
+
+    private const double DragAutoScrollEdgeThreshold = 56d;
+    private const double DragAutoScrollStep = 24d;
 
     public MainWindow()
     {
@@ -255,6 +263,8 @@ public partial class MainWindow : Window
 
         try
         {
+            CapturePreviewOrderSnapshot();
+            SetDragSourceState(dragRecord);
             DragDrop.DoDragDrop(
                 RecordsList,
                 new System.Windows.DataObject(typeof(RecordListItemViewModel), dragRecord),
@@ -262,6 +272,8 @@ public partial class MainWindow : Window
         }
         finally
         {
+            RevertPreviewOrderIfNeeded();
+            ClearDragSourceState();
             ClearDropTargetState();
         }
     }
@@ -278,16 +290,29 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!TryResolveDropTarget(e.OriginalSource as DependencyObject, out var targetRecord) ||
-            targetRecord is null ||
-            targetRecord.Id == draggedRecord.Id)
+        UpdateDragAutoScroll(e);
+        var pointer = e.GetPosition(RecordsList);
+
+        if (!TryResolveDropTarget(e, pointer, draggedRecord, out var targetRecord) ||
+            targetRecord is null)
         {
+            RevertPreviewOrderIfNeeded();
             e.Effects = System.Windows.DragDropEffects.None;
             ClearDropTargetState();
             e.Handled = true;
             return;
         }
 
+        if (targetRecord.Id == draggedRecord.Id)
+        {
+            RevertPreviewOrderIfNeeded();
+            e.Effects = System.Windows.DragDropEffects.None;
+            ClearDropTargetState();
+            e.Handled = true;
+            return;
+        }
+
+        PreviewSwapOrder(draggedRecord, targetRecord);
         SetDropTargetState(targetRecord);
         e.Effects = System.Windows.DragDropEffects.Move;
         e.Handled = true;
@@ -301,14 +326,16 @@ public partial class MainWindow : Window
 
             if (draggedRecord is null ||
                 DataContext is not MainWindowViewModel viewModel ||
-                !TryResolveDropTarget(e.OriginalSource as DependencyObject, out var targetRecord) ||
-                targetRecord is null ||
-                draggedRecord.Id == targetRecord.Id)
+                _activeDropTargetRecord is null ||
+                _activeDropTargetRecord.Id == draggedRecord.Id)
             {
+                RevertPreviewOrderIfNeeded();
                 return;
             }
 
-            await viewModel.ReorderRecordAsync(draggedRecord, targetRecord);
+            await viewModel.ReorderRecordAsync(draggedRecord, _activeDropTargetRecord);
+            _dragPreviewOriginalOrderIds = null;
+            _previewTargetRecordId = null;
         }
         finally
         {
@@ -320,8 +347,11 @@ public partial class MainWindow : Window
 
     private void RecordsList_OnDragLeave(object sender, System.Windows.DragEventArgs e)
     {
+        ResetDragAutoScroll();
+
         if (e.OriginalSource is not DependencyObject source || FindAncestor<System.Windows.Controls.ListBox>(source) is null)
         {
+            RevertPreviewOrderIfNeeded();
             ClearDropTargetState();
         }
     }
@@ -590,7 +620,7 @@ public partial class MainWindow : Window
                 return source;
             }
 
-            source = VisualTreeHelper.GetParent(source);
+            source = GetParentObject(source);
         }
 
         return null;
@@ -608,20 +638,29 @@ public partial class MainWindow : Window
     }
 
     private bool TryResolveDropTarget(
-        DependencyObject? source,
+        System.Windows.DragEventArgs e,
+        System.Windows.Point pointer,
+        RecordListItemViewModel draggedRecord,
         out RecordListItemViewModel? targetRecord)
     {
         targetRecord = null;
 
-        var container = FindAncestor<ListBoxItem>(source);
-
-        if (container?.DataContext is RecordListItemViewModel record)
+        if (_dragPreviewBoundsByRecordId is not null)
         {
-            targetRecord = record;
+            return TryResolveDropTargetFromSnapshot(pointer, draggedRecord, out targetRecord);
+        }
+
+        var source = e.OriginalSource as DependencyObject;
+        var directContainer = FindAncestor<ListBoxItem>(source);
+
+        if (directContainer?.DataContext is RecordListItemViewModel directRecord &&
+            directRecord.Id != draggedRecord.Id)
+        {
+            targetRecord = directRecord;
             return true;
         }
 
-        return false;
+        return TryResolveDropTargetFromCurrentLayout(pointer, draggedRecord, out targetRecord);
     }
 
     private void SetDropTargetState(RecordListItemViewModel targetRecord)
@@ -636,6 +675,18 @@ public partial class MainWindow : Window
         _activeDropTargetRecord.IsDropTarget = true;
     }
 
+    private void SetDragSourceState(RecordListItemViewModel dragRecord)
+    {
+        if (_activeDragSourceRecord == dragRecord)
+        {
+            return;
+        }
+
+        ClearDragSourceState();
+        _activeDragSourceRecord = dragRecord;
+        _activeDragSourceRecord.IsDragSource = true;
+    }
+
     private void ClearDropTargetState()
     {
         if (_activeDropTargetRecord is null)
@@ -645,6 +696,290 @@ public partial class MainWindow : Window
 
         _activeDropTargetRecord.IsDropTarget = false;
         _activeDropTargetRecord = null;
+    }
+
+    private void ClearDragSourceState()
+    {
+        if (_activeDragSourceRecord is null)
+        {
+            return;
+        }
+
+        _activeDragSourceRecord.IsDragSource = false;
+        _activeDragSourceRecord = null;
+    }
+
+    private void UpdateDragAutoScroll(System.Windows.DragEventArgs e)
+    {
+        var scrollViewer = GetRecordsScrollViewer();
+
+        if (scrollViewer is null)
+        {
+            return;
+        }
+
+        var position = e.GetPosition(scrollViewer);
+        var offset = scrollViewer.VerticalOffset;
+
+        if (position.Y <= DragAutoScrollEdgeThreshold)
+        {
+            scrollViewer.ScrollToVerticalOffset(Math.Max(0, offset - DragAutoScrollStep));
+            return;
+        }
+
+        if (position.Y >= scrollViewer.ViewportHeight - DragAutoScrollEdgeThreshold)
+        {
+            scrollViewer.ScrollToVerticalOffset(Math.Min(scrollViewer.ScrollableHeight, offset + DragAutoScrollStep));
+        }
+    }
+
+    private void ResetDragAutoScroll()
+    {
+        _recordsScrollViewer ??= GetRecordsScrollViewer();
+    }
+
+    private ScrollViewer? GetRecordsScrollViewer()
+    {
+        _recordsScrollViewer ??= FindDescendant<ScrollViewer>(RecordsList);
+        return _recordsScrollViewer;
+    }
+
+    private void CapturePreviewOrderSnapshot()
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        _dragPreviewOriginalOrderIds = viewModel.Records
+            .Select(item => item.Id)
+            .ToArray();
+        _previewTargetRecordId = null;
+        _dragPreviewBoundsByRecordId = CaptureDragPreviewBounds(viewModel.Records);
+    }
+
+    private void PreviewSwapOrder(
+        RecordListItemViewModel draggedRecord,
+        RecordListItemViewModel targetRecord)
+    {
+        if (DataContext is not MainWindowViewModel viewModel ||
+            _dragPreviewOriginalOrderIds is null)
+        {
+            return;
+        }
+
+        if (_previewTargetRecordId == targetRecord.Id)
+        {
+            return;
+        }
+
+        var desiredOrderIds = (Guid[])_dragPreviewOriginalOrderIds.Clone();
+        var draggedIndex = Array.IndexOf(desiredOrderIds, draggedRecord.Id);
+        var targetIndex = Array.IndexOf(desiredOrderIds, targetRecord.Id);
+
+        if (draggedIndex < 0 || targetIndex < 0 || draggedIndex == targetIndex)
+        {
+            return;
+        }
+
+        (desiredOrderIds[draggedIndex], desiredOrderIds[targetIndex]) =
+            (desiredOrderIds[targetIndex], desiredOrderIds[draggedIndex]);
+
+        viewModel.ApplyPreviewOrder(desiredOrderIds);
+        _previewTargetRecordId = targetRecord.Id;
+    }
+
+    private void RevertPreviewOrderIfNeeded()
+    {
+        if (DataContext is not MainWindowViewModel viewModel ||
+            _dragPreviewOriginalOrderIds is null)
+        {
+            return;
+        }
+
+        viewModel.RestorePreviewOrder(_dragPreviewOriginalOrderIds);
+        _previewTargetRecordId = null;
+    }
+
+    private bool TryResolveDropTargetFromSnapshot(
+        System.Windows.Point pointer,
+        RecordListItemViewModel draggedRecord,
+        out RecordListItemViewModel? targetRecord)
+    {
+        targetRecord = null;
+
+        if (_dragPreviewBoundsByRecordId is null ||
+            DataContext is not MainWindowViewModel viewModel)
+        {
+            return false;
+        }
+
+        var pointerInContent = ToContentPoint(pointer);
+        var bestRecord = default(RecordListItemViewModel);
+        var bestDistance = double.MaxValue;
+        var isDraggedBoundsNearest = false;
+
+        if (_dragPreviewBoundsByRecordId.TryGetValue(draggedRecord.Id, out var draggedBounds))
+        {
+            if (draggedBounds.Contains(pointerInContent))
+            {
+                return false;
+            }
+
+            bestDistance = GetDistanceSquared(pointerInContent, draggedBounds);
+            isDraggedBoundsNearest = true;
+        }
+
+        foreach (var record in viewModel.Records)
+        {
+            if (record.Id == draggedRecord.Id ||
+                !_dragPreviewBoundsByRecordId.TryGetValue(record.Id, out var rect))
+            {
+                continue;
+            }
+
+            if (rect.Contains(pointerInContent))
+            {
+                targetRecord = record;
+                return true;
+            }
+
+            var distance = GetDistanceSquared(pointerInContent, rect);
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestRecord = record;
+                isDraggedBoundsNearest = false;
+            }
+        }
+
+        if (bestRecord is null || isDraggedBoundsNearest)
+        {
+            if (_previewTargetRecordId is not null)
+            {
+                RevertPreviewOrderIfNeeded();
+                ClearDropTargetState();
+            }
+
+            return false;
+        }
+
+        targetRecord = bestRecord;
+        return true;
+    }
+
+    private bool TryResolveDropTargetFromCurrentLayout(
+        System.Windows.Point pointer,
+        RecordListItemViewModel draggedRecord,
+        out RecordListItemViewModel? targetRecord)
+    {
+        targetRecord = null;
+        var bestRecord = default(RecordListItemViewModel);
+        var bestDistance = double.MaxValue;
+
+        foreach (var item in RecordsList.Items)
+        {
+            if (item is not RecordListItemViewModel record || record.Id == draggedRecord.Id)
+            {
+                continue;
+            }
+
+            if (RecordsList.ItemContainerGenerator.ContainerFromItem(item) is not ListBoxItem container ||
+                container.ActualWidth <= 0 ||
+                container.ActualHeight <= 0)
+            {
+                continue;
+            }
+
+            var rect = GetBounds(container);
+
+            if (rect.Contains(pointer))
+            {
+                targetRecord = record;
+                return true;
+            }
+
+            var distance = GetDistanceSquared(pointer, rect);
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestRecord = record;
+            }
+        }
+
+        if (bestRecord is null)
+        {
+            return false;
+        }
+
+        targetRecord = bestRecord;
+        return true;
+    }
+
+    private Dictionary<Guid, Rect> CaptureDragPreviewBounds(IEnumerable<RecordListItemViewModel> records)
+    {
+        var result = new Dictionary<Guid, Rect>();
+
+        foreach (var record in records)
+        {
+            if (!TryGetRecordBounds(record, out var bounds))
+            {
+                continue;
+            }
+
+            result[record.Id] = bounds;
+        }
+
+        return result;
+    }
+
+    private bool TryGetRecordBounds(RecordListItemViewModel record, out Rect bounds)
+    {
+        bounds = default;
+
+        if (RecordsList.ItemContainerGenerator.ContainerFromItem(record) is not ListBoxItem container ||
+            container.ActualWidth <= 0 ||
+            container.ActualHeight <= 0)
+        {
+            return false;
+        }
+
+        bounds = GetBounds(container);
+        bounds.Y += GetRecordsVerticalOffset();
+        return true;
+    }
+
+    private Rect GetBounds(ListBoxItem container)
+    {
+        var topLeft = container.TranslatePoint(new System.Windows.Point(0, 0), RecordsList);
+        return new Rect(topLeft.X, topLeft.Y, container.ActualWidth, container.ActualHeight);
+    }
+
+    private System.Windows.Point ToContentPoint(System.Windows.Point pointer)
+    {
+        return new System.Windows.Point(pointer.X, pointer.Y + GetRecordsVerticalOffset());
+    }
+
+    private double GetRecordsVerticalOffset()
+    {
+        return GetRecordsScrollViewer()?.VerticalOffset ?? 0d;
+    }
+
+    private static double GetDistanceSquared(System.Windows.Point point, Rect rect)
+    {
+        var dx = point.X < rect.Left
+            ? rect.Left - point.X
+            : point.X > rect.Right
+                ? point.X - rect.Right
+                : 0;
+        var dy = point.Y < rect.Top
+            ? rect.Top - point.Y
+            : point.Y > rect.Bottom
+                ? point.Y - rect.Bottom
+                : 0;
+        return dx * dx + dy * dy;
     }
 
     private static Slider? ResolveSlider(DependencyObject? source)
@@ -657,6 +992,34 @@ public partial class MainWindow : Window
             }
 
             source = VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
+    }
+
+    private static T? FindDescendant<T>(DependencyObject? source)
+        where T : DependencyObject
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(source); index++)
+        {
+            var child = VisualTreeHelper.GetChild(source, index);
+
+            if (child is T target)
+            {
+                return target;
+            }
+
+            var nested = FindDescendant<T>(child);
+
+            if (nested is not null)
+            {
+                return nested;
+            }
         }
 
         return null;

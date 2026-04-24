@@ -114,6 +114,8 @@ Links are opened through the system handler.
 - Adaptive record card layout
 - Manual drag-reorder of record cards within the selected day, with persisted order
 - Drag-and-drop reorder currently swaps cards by target position, which keeps behavior intuitive across wrap rows
+- Temporary preview swaps and edge autoscroll make drag-and-drop reorder operations usable without switching to a custom layout engine
+- Spatial target resolution keeps drag-and-drop reorder usable across wrap gaps and uneven card heights
 - Compact created-time badge on every record card
 - Click empty space to clear record selection
 - Tray mode for background operation
@@ -121,6 +123,7 @@ Links are opened through the system handler.
 ### 🌍 Localization
 - Russian: `ru-RU`
 - English: `en-US`
+- Simplified Chinese: `zh-CN`
 
 ## 🛠 Tech Stack
 

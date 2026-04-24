@@ -627,16 +627,12 @@
                                             Background="{DynamicResource App.SurfacePrimaryBrush}"
                                             BorderBrush="{DynamicResource App.BorderBrush}"
                                             BorderThickness="1"
-                                            CornerRadius="14">
+                                            CornerRadius="14"
+                                            RenderTransformOrigin="0.5,0.5">
+                                            <Border.RenderTransform>
+                                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                                            </Border.RenderTransform>
                                             <Grid>
-                                                <Border
-                                                    x:Name="SelectionStripe"
-                                                    Width="0"
-                                                    Margin="0"
-                                                    HorizontalAlignment="Left"
-                                                    Background="Transparent"
-                                                    CornerRadius="0" />
-
                                                 <Grid Margin="16">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*" />
@@ -1941,7 +1937,19 @@
 
                                             <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
                                                 <Setter TargetName="CardRoot" Property="BorderBrush" Value="{DynamicResource App.AccentPrimaryBrush}" />
+                                                <Setter TargetName="CardRoot" Property="BorderThickness" Value="4" />
+                                                <Setter TargetName="CardRoot" Property="Background" Value="{DynamicResource App.SurfaceHoverBrush}" />
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding IsDragSource}" Value="True">
+                                                <Setter TargetName="CardRoot" Property="Opacity" Value="0.58" />
+                                                <Setter TargetName="CardRoot" Property="BorderBrush" Value="{DynamicResource App.AccentPrimaryBrush}" />
                                                 <Setter TargetName="CardRoot" Property="BorderThickness" Value="3" />
+                                                <Setter TargetName="CardRoot" Property="RenderTransform">
+                                                    <Setter.Value>
+                                                        <ScaleTransform ScaleX="0.985" ScaleY="0.985" />
+                                                    </Setter.Value>
+                                                </Setter>
                                             </DataTrigger>
 
                                             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">

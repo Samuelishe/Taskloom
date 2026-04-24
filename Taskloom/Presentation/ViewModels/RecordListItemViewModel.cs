@@ -155,6 +155,9 @@ public sealed partial class RecordListItemViewModel : ObservableObject, IDisposa
     [ObservableProperty]
     private bool isDropTarget;
 
+    [ObservableProperty]
+    private bool isDragSource;
+
 
     public void Dispose()
     {
