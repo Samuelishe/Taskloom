@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  Current development version: <b>0.4.0-dev</b>
+</p>
+
+<p align="center">
   <img src="Taskloom/Assets/Images/mockup-image.png" alt="Taskloom app mockup" width="980" />
 </p>
 
@@ -35,6 +39,7 @@ The app is designed as a local-first personal planner with a calendar-first work
 - Fast date navigation
 - Daily record list with filtering by record type
 - Clear visual distinction between tasks, notes, events, and summaries
+- Selector-style record cards with a separate details pane for the currently selected record
 
 ### 🧩 Multiple record types
 - **Task**: title, details, completion state, reminder time
@@ -62,6 +67,7 @@ The app is designed as a local-first personal planner with a calendar-first work
 - Click to open the original file with the system viewer
 - Per-record media folders under `%LocalAppData%\\Taskloom\\Records\\<record-id>`
 - Sidecar `record.json` metadata file for local record resources
+- Attachment presence and counts are visible directly on record cards before opening the details pane
 
 ### 🎵 Audio attachments
 - Multiple audio files per record
@@ -80,6 +86,7 @@ The app is designed as a local-first personal planner with a calendar-first work
 - Compact album / genre metadata when available
 - Duplicate file name line is hidden when it does not add information
 - Full text is available on hover for trimmed record and audio lines without expanding the card layout
+- Audio details can be reviewed in the selected-record details pane without inflating the whole day grid
 
 ### 🔗 Smart links in descriptions
 Taskloom detects and makes links clickable directly inside record descriptions, including:
@@ -96,7 +103,7 @@ Taskloom detects and makes links clickable directly inside record descriptions, 
 Links are opened through the system handler.
 
 ### ▶️ Video link previews
-- YouTube links in record descriptions can show cached title + thumbnail previews directly in the record card
+- YouTube links in record descriptions can show cached title + thumbnail previews in the selected-record details pane
 - Preview cards are limited to five items; additional video links fall back to a simple text list
 - If YouTube `oEmbed` does not return a title, Taskloom tries to parse the public video page as a fallback before using a neutral placeholder
 - Records can optionally hide standalone video-link lines when a preview card is shown, without modifying the original saved note text
@@ -111,12 +118,13 @@ Links are opened through the system handler.
 - Theme-aware controls
 - Instant-apply settings for theme, language, and cleanup policy
 - Themed in-app confirmation dialogs instead of default system message boxes
-- Adaptive record card layout
+- Adaptive record card layout with compact selector cards
 - Manual drag-reorder of record cards within the selected day, with persisted order
 - Drag-and-drop reorder currently swaps cards by target position, which keeps behavior intuitive across wrap rows
 - Temporary preview swaps and edge autoscroll make drag-and-drop reorder operations usable without switching to a custom layout engine
 - Spatial target resolution keeps drag-and-drop reorder usable across wrap gaps and uneven card heights
 - Compact created-time badge on every record card
+- Record cards expose image / audio / video counts before selection
 - Click empty space to clear record selection
 - Tray mode for background operation
 
@@ -236,6 +244,6 @@ Taskloom is already functional as a personal desktop organizer and continues to 
 The current focus is on:
 
 - stability and edge-case hardening
-- refinement of record-card layout and drag-reorder UX
+- refinement of selector-card density, details-pane hierarchy, and drag-reorder UX
 - richer attachment and link preview UX
 - continued refinement of the calendar-centered workflow

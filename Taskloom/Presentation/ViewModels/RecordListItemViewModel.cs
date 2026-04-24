@@ -98,6 +98,18 @@ public sealed partial class RecordListItemViewModel : ObservableObject, IDisposa
 
     public bool HasOverflowVideoLinks => OverflowVideoLinks.Count > 0;
 
+    public int AudioCount => Audios.Count;
+
+    public int PreviewVideoLinkCount => VideoLinks.Count;
+
+    public int OverflowVideoLinkCount => OverflowVideoLinks.Count;
+
+    public int TotalVideoLinkCount => PreviewVideoLinkCount + OverflowVideoLinkCount;
+
+    public bool HasAnyVideoLinksSummary => TotalVideoLinkCount > 0;
+
+    public bool HasAnyMediaSummary => HasImages || HasAudios || TotalVideoLinkCount > 0;
+
     public bool HasSingleImage => Images.Count == 1;
 
     public bool HasTwoImages => Images.Count == 2;

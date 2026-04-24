@@ -9,10 +9,10 @@ namespace Taskloom.Common.Converters;
 public sealed class AdaptiveCardWidthConverter : IMultiValueConverter
 {
     private const double CardSpacing = 12d;
-    private const double WideThreshold = 1280d;
-    private const double MediumThreshold = 860d;
-    private const double MinimumCardWidth = 260d;
-    private const double MaximumCardWidth = 440d;
+    private const double WideThreshold = 1120d;
+    private const double MediumThreshold = 760d;
+    private const double MinimumCardWidth = 232d;
+    private const double MaximumCardWidth = 380d;
 
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
     {

@@ -2014,3 +2014,152 @@
 - Audio playlist лучше строить поверх уже существующей attachment-модели, чем заводить отдельную сущность только для музыки.
 - Единый playback service нужен, чтобы карточки записей не запускали несколько конкурирующих плееров одновременно.
 - Метаданные аудио нужно читать при импорте и сохранять рядом с attachment, иначе список записей начнёт лезть в файлы при каждом открытии дня.
+
+## 2026-04-24 - Адаптивность главного окна и восстановление навигации календаря
+
+### Что сделано
+
+- Для безрамочного `MainWindow` восстановлено реальное ограничение минимального размера: `WindowMaximizeBoundsHelper` теперь прокидывает `MinWidth` и `MinHeight` в `WM_GETMINMAXINFO`.
+- Для главного окна зафиксирована безопасная минимальная ширина, чтобы нельзя было ужать приложение до состояния, где ломаются title bar, календарь и панель записей.
+- В `ContinuationGuide.md` и `GitWorkflow.md` зафиксировано правило сборки через Rider-bundled `dotnet` с SDK 10; системный CLI в среде пользователя может видеть только SDK 9 и давать ложные ошибки по `net10.0-windows10.0.19041.0`.
+- Восстановлена нормальная навигация календаря `Month -> Year -> Decade -> Year -> Month`: теперь кастомный `CalendarItem` переключает `PART_MonthView` и `PART_YearView` через `DataTrigger` по `Calendar.DisplayMode`, а не через разошедшиеся локальные шаблоны.
+- Убран дублированный локальный `CalendarItem` template из `MainWindow.xaml`; главный календарь и popup-календарь `DatePicker` снова используют один общий theme-aware style из `App.xaml`.
+- Для header и стрелок календаря добавлены отдельные стили, чтобы убрать возврат системных hover/focus-цветов после починки навигации.
+- Сборка `Taskloom.sln` через Rider `dotnet` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/App.xaml`
+- `Taskloom/Common/Windowing/WindowMaximizeBoundsHelper.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/GitWorkflow.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Для безрамочных окон недостаточно задать `MinWidth` только в XAML: собственный обработчик `WM_GETMINMAXINFO` может случайно убрать системный minimum track size и сделать окно сжимаемым почти до нуля.
+- Кастомный `CalendarItem` должен быть единым для главного календаря и popup-календарей, иначе достаточно одной локальной копии шаблона, чтобы сломать переходы между днями, месяцами и годами.
+- Для этого кейса оказалось надёжнее переключать визуальные контейнеры по `Calendar.DisplayMode`, чем воспроизводить внутреннюю механику visual states WPF вручную.
+
+## 2026-04-24 - Актуализация дальнейшего плана по reorder, About и versioning
+
+### Что сделано
+
+- Текущий следующий этап уточнён: сам drag-reorder уже считается рабочим, а фокус переносится на перекомпоновку карточек после reorder при разной высоте и wrap-layout пустотах.
+- Эти задачи объединены с уже существующим планом по spatial drag-reorder, а не вынесены в отдельную несвязанную тему.
+- В план добавлена отдельная `About`-секция в настройках с автором, версией и build metadata.
+- Зафиксирована стратегия версионирования проекта как pre-1.0 `SemVer` в диапазоне `0.x.y`.
+- Текущая рабочая версия проекта выбрана как `0.4.0-dev`.
+- Идея `Ctrl + drag` merge зафиксирована как будущий отдельный drag-intent: source должен сливаться с target, исчезать после успешного merge и не подменять собой обычный swap.
+
+### Изменённые файлы
+
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Если сам drag уже устраивает, следующий риск — не базовый DnD, а визуальная и логическая модель layout после reorder.
+- `About` и версия нужны не только для пользователя, но и для дисциплины релизов, диагностики и будущей поддержки.
+- `Ctrl + drag` merge — это уже отдельная доменная операция, а не маленькая вариация swap, поэтому её лучше заранее зафиксировать как самостоятельное направление.
+
+## 2026-04-24 - Summary cards как первый шаг стабилизации layout после reorder
+
+### Что сделано
+
+- Карточки списка записей переведены в более устойчивый режим: тяжёлые media-блоки (`video previews`, `audio playlist`, `image gallery`) теперь раскрываются только у выбранной записи.
+- Для невыбранных карточек добавлена компактная media-summary строка с количеством изображений, аудио и видео-ссылок.
+- Высота заголовка и блока описания ограничена жёстче, чтобы разброс геометрии карточек был меньше даже до замены `WrapPanel`.
+- Сборка `Taskloom.sln` через Rider `dotnet` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Корень проблемы после reorder был не только в DnD, но и в том, что каждая карточка пыталась быть mini-details page с произвольной высотой.
+- Режим `summary cards + expanded selected card` даёт самый дешёвый и безопасный первый шаг к стабильному layout без немедленного перехода на custom panel или masonry-подобную упаковку.
+
+## 2026-04-24 - Separate details pane вместо раскрытия selected-card внутри списка
+
+### Что сделано
+
+- В `MainWindow` список записей переведён в режим `summary-only`: media-summary остаётся на карточке всегда, а тяжёлые секции больше не раскрываются по `IsSelected` внутри `ListBox`.
+- Для `SelectedRecord` добавлена отдельная detail-панель под списком в правой области окна.
+- В detail-панели показываются заголовок, тип, время/статус, описание, видео-ссылки, аудио и изображения выбранной записи.
+- Для новой панели добавлены локализованные строки `MainWindow.SelectedRecord`, `MainWindow.SelectRecordHint` и `MainWindow.VideoLinks`.
+- Сборка `Taskloom.sln` через Rider `dotnet` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/zh-CN.json`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Раскрытие выбранной карточки прямо внутри wrap-списка продолжало менять геометрию ленты и давало визуальные скачки даже после улучшения summary-card.
+- Отдельная details-pane стабилизирует упаковку карточек, не ломает persisted linear order и лучше готовит архитектуру под будущие `strip mode`, `About` и `Ctrl + drag merge`.
+
+## 2026-04-24 - Первичная полировка новой details-pane
+
+### Что сделано
+
+- В details-pane возвращены визуальные превью для video links: каждая ссылка снова показывает thumbnail-блок или placeholder.
+- Для аудио в details-pane возвращены cover preview и иконка-заглушка при отсутствии обложки.
+- Верхняя строка details-pane переведена с жёсткого `StackPanel` на `WrapPanel`, чтобы status/time chips вели себя мягче при разной ширине.
+- Сборка `Taskloom.sln` через Rider `dotnet` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- После переноса details из карточки в нижнюю панель исчезли thumbnail/covers, и панель потеряла визуальные якоря контента.
+- До замены layout panel важнее сначала вернуть читаемую media-иерархию и успокоить размеры chips, чем сразу переходить к следующему крупному архитектурному шагу.
+
+## 2026-04-24 - Уплотнение selector cards и явный attachment-summary до открытия
+
+### Что сделано
+
+- Верхние карточки списка стали плотнее: уменьшены их минимальная высота, максимальная ширина и вертикальный ритм текста.
+- `AdaptiveCardWidthConverter` пересчитан под более компактные selector cards, чтобы карточки не выглядели чрезмерно широкими после выноса контента вниз.
+- Media-summary на карточке сделан более явным: chips теперь показывают не только иконку и число, но и короткую текстовую подпись для изображений, аудио и видео.
+- Для этих chips добавлены локализованные короткие подписи в `ru-RU`, `en-US` и `zh-CN`.
+- Сборка `Taskloom.sln` через Rider `dotnet` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые файлы
+
+- `Taskloom/Common/Converters/AdaptiveCardWidthConverter.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/zh-CN.json`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- После переноса подробностей в отдельную нижнюю панель верхние карточки перестали быть контентным контейнером и стали в первую очередь selector-элементами.
+- Если selector card не показывает наличие вложений до клика, пользователь теряет важную часть ориентиров в списке дня.
+- Избыточные ширина и высота selector cards начинают визуально выглядеть пустыми, поэтому уплотнение и явный summary — часть того же UX-решения, а не отдельная косметика.
