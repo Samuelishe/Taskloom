@@ -33,6 +33,8 @@ public sealed class SqliteDatabaseInitializer
         await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         var command = new CommandDefinition(sql, cancellationToken: cancellationToken);
         await connection.ExecuteAsync(command);
+        await EnsureColumnAsync(connection, "created_utc", "TEXT NULL", cancellationToken);
+        await BackfillRecordCreatedUtcAsync(connection, cancellationToken);
         await EnsureColumnAsync(connection, "event_status_id", "INTEGER NULL", cancellationToken);
         await EnsureColumnAsync(connection, "reminder_minutes_before", "INTEGER NULL", cancellationToken);
         await EnsureColumnAsync(connection, "task_reminder_time", "TEXT NULL", cancellationToken);
@@ -159,7 +161,9 @@ public sealed class SqliteDatabaseInitializer
             normalizedSql.Contains("check(kind_idin(1))", StringComparison.Ordinal) ||
             !normalizedSql.Contains("display_title", StringComparison.Ordinal) ||
             !normalizedSql.Contains("duration_seconds", StringComparison.Ordinal) ||
-            !normalizedSql.Contains("preview_relative_path", StringComparison.Ordinal);
+            !normalizedSql.Contains("preview_relative_path", StringComparison.Ordinal) ||
+            !normalizedSql.Contains("album_title", StringComparison.Ordinal) ||
+            !normalizedSql.Contains("genre", StringComparison.Ordinal);
 
         if (requiresRebuild)
         {
@@ -179,20 +183,24 @@ public sealed class SqliteDatabaseInitializer
                                           content_type TEXT NULL,
                                           file_size INTEGER NOT NULL,
                                           created_utc TEXT NOT NULL,
-                                          sort_order INTEGER NOT NULL DEFAULT 0,
-                                          display_title TEXT NULL,
-                                          duration_seconds REAL NULL,
-                                          preview_relative_path TEXT NULL,
-                                          CHECK (length(trim(original_file_name)) > 0),
+                                         sort_order INTEGER NOT NULL DEFAULT 0,
+                                         display_title TEXT NULL,
+                                         duration_seconds REAL NULL,
+                                         preview_relative_path TEXT NULL,
+                                         album_title TEXT NULL,
+                                         genre TEXT NULL,
+                                         CHECK (length(trim(original_file_name)) > 0),
                                           CHECK (length(original_file_name) <= 260),
                                           CHECK (length(trim(stored_file_name)) > 0),
                                           CHECK (length(stored_file_name) <= 260),
                                           CHECK (length(trim(relative_path)) > 0),
                                           CHECK (length(relative_path) <= 512),
-                                          CHECK (content_type IS NULL OR length(content_type) <= 100),
-                                          CHECK (display_title IS NULL OR length(display_title) <= 260),
-                                          CHECK (preview_relative_path IS NULL OR length(preview_relative_path) <= 512),
-                                          CHECK (file_size >= 0),
+                                         CHECK (content_type IS NULL OR length(content_type) <= 100),
+                                         CHECK (display_title IS NULL OR length(display_title) <= 260),
+                                         CHECK (preview_relative_path IS NULL OR length(preview_relative_path) <= 512),
+                                         CHECK (album_title IS NULL OR length(album_title) <= 260),
+                                         CHECK (genre IS NULL OR length(genre) <= 120),
+                                         CHECK (file_size >= 0),
                                           CHECK (sort_order >= 0),
                                           CHECK (duration_seconds IS NULL OR duration_seconds >= 0)
                                       );
@@ -211,7 +219,9 @@ public sealed class SqliteDatabaseInitializer
                                           sort_order,
                                           display_title,
                                           duration_seconds,
-                                          preview_relative_path
+                                          preview_relative_path,
+                                          album_title,
+                                          genre
                                       )
                                       SELECT
                                           id,
@@ -224,7 +234,9 @@ public sealed class SqliteDatabaseInitializer
                                           file_size,
                                           created_utc,
                                           COALESCE(sort_order, 0),
-                                          NULL,
+                                          display_title,
+                                          duration_seconds,
+                                          preview_relative_path,
                                           NULL,
                                           NULL
                                       FROM record_attachments;
@@ -241,6 +253,8 @@ public sealed class SqliteDatabaseInitializer
         await EnsureRecordAttachmentColumnAsync(connection, "display_title", "TEXT NULL", cancellationToken);
         await EnsureRecordAttachmentColumnAsync(connection, "duration_seconds", "REAL NULL", cancellationToken);
         await EnsureRecordAttachmentColumnAsync(connection, "preview_relative_path", "TEXT NULL", cancellationToken);
+        await EnsureRecordAttachmentColumnAsync(connection, "album_title", "TEXT NULL", cancellationToken);
+        await EnsureRecordAttachmentColumnAsync(connection, "genre", "TEXT NULL", cancellationToken);
     }
 
     private static async Task RecreateRecordAttachmentIndexesAsync(
@@ -252,6 +266,19 @@ public sealed class SqliteDatabaseInitializer
 
                            CREATE INDEX IF NOT EXISTS ix_record_attachments_record_sort
                                ON record_attachments(record_id, sort_order, created_utc);
+                           """;
+
+        await connection.ExecuteAsync(new CommandDefinition(sql, cancellationToken: cancellationToken));
+    }
+
+    private static async Task BackfillRecordCreatedUtcAsync(
+        System.Data.IDbConnection connection,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+                           UPDATE calendar_records
+                           SET created_utc = COALESCE(created_utc, STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now'))
+                           WHERE created_utc IS NULL OR trim(created_utc) = '';
                            """;
 
         await connection.ExecuteAsync(new CommandDefinition(sql, cancellationToken: cancellationToken));

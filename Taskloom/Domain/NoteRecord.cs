@@ -5,8 +5,8 @@ namespace Taskloom.Domain;
 /// </summary>
 public sealed class NoteRecord : CalendarRecord
 {
-    public NoteRecord(Guid id, DateOnly date, string title, string? details)
-        : base(id, RecordType.Note, date, title, details)
+    public NoteRecord(Guid id, DateOnly date, string title, string? details, DateTime? createdUtc = null)
+        : base(id, RecordType.Note, date, title, details, createdUtc)
     {
     }
 }

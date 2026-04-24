@@ -17,6 +17,7 @@
         Icon="/Assets/Icons/Taskloom.ico"
         WindowStyle="None"
         WindowStartupLocation="CenterScreen"
+        PreviewMouseLeftButtonDown="MainWindow_OnPreviewMouseLeftButtonDown"
         ResizeMode="CanResize">
     <WindowChrome.WindowChrome>
         <WindowChrome
@@ -32,6 +33,14 @@
         <converters:AdaptiveCardWidthConverter x:Key="AdaptiveCardWidthConverter" />
         <converters:ImagePathToBitmapConverter x:Key="ImagePathToBitmapConverter" />
         <converters:AudioCoverSourceToBitmapConverter x:Key="AudioCoverSourceToBitmapConverter" />
+        <Style x:Key="CreatedAtChipBorderStyle" TargetType="Border" BasedOn="{StaticResource NeutralChipBorderStyle}">
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Opacity" Value="0.92" />
+        </Style>
+        <Style x:Key="CreatedAtChipTextStyle" TargetType="TextBlock" BasedOn="{StaticResource ChipTextStyle}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource App.TextMutedBrush}" />
+        </Style>
         <Style x:Key="CalendarPanelButtonStyle" TargetType="{x:Type CalendarButton}">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
@@ -614,18 +623,15 @@
                                             BorderThickness="1"
                                             CornerRadius="14">
                                             <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="6" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-
                                                 <Border
                                                     x:Name="SelectionStripe"
+                                                    Width="0"
                                                     Margin="0"
+                                                    HorizontalAlignment="Left"
                                                     Background="Transparent"
-                                                    CornerRadius="14,0,0,14" />
+                                                    CornerRadius="0" />
 
-                                                <Grid Grid.Column="1" Margin="16">
+                                                <Grid Margin="16">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
@@ -651,6 +657,15 @@
                                                     <StackPanel
                                                         Grid.Column="1"
                                                         Orientation="Horizontal">
+                                                        <Border
+                                                            x:Name="CreatedAtBadge"
+                                                            Margin="0,0,8,0"
+                                                            Style="{StaticResource CreatedAtChipBorderStyle}">
+                                                            <TextBlock
+                                                                Style="{StaticResource CreatedAtChipTextStyle}"
+                                                                Text="{Binding CreatedAtDisplay}" />
+                                                        </Border>
+
                                                         <Border
                                                             x:Name="InfoBadge"
                                                             Margin="0,0,8,0"
@@ -695,7 +710,8 @@
                                                         Foreground="{DynamicResource App.TextPrimaryBrush}"
                                                         Text="{Binding Title}"
                                                         TextTrimming="CharacterEllipsis"
-                                                        TextWrapping="Wrap" />
+                                                        TextWrapping="Wrap"
+                                                        ToolTip="{Binding Title}" />
 
                                                     <TextBlock
                                                         Grid.Row="2"
@@ -707,6 +723,7 @@
                                                         Foreground="{DynamicResource App.TextMutedBrush}"
                                                         Text="{Binding LocationDisplay}"
                                                         TextTrimming="CharacterEllipsis"
+                                                        ToolTip="{Binding LocationDisplay}"
                                                         Visibility="Collapsed" />
 
                                                     <TextBlock
@@ -717,7 +734,8 @@
                                                         MaxHeight="84"
                                                         text:TextBlockLinkBehavior.LinkText="{Binding Details}"
                                                         TextTrimming="WordEllipsis"
-                                                        TextWrapping="Wrap" />
+                                                        TextWrapping="Wrap"
+                                                        ToolTip="{Binding Details}" />
 
                                                     <ItemsControl
                                                         x:Name="AudioHost"
@@ -792,12 +810,52 @@
                                                                         </Grid>
                                                                     </Border>
 
-                                                                        <TextBlock
+                                                                        <StackPanel
                                                                             Grid.Column="2"
-                                                                            FontWeight="SemiBold"
-                                                                            Foreground="{DynamicResource App.TextPrimaryBrush}"
-                                                                            Text="{Binding DisplayTitle}"
-                                                                            TextTrimming="CharacterEllipsis" />
+                                                                            Grid.RowSpan="2">
+                                                                            <TextBlock
+                                                                                FontWeight="SemiBold"
+                                                                                Foreground="{DynamicResource App.TextPrimaryBrush}"
+                                                                                Text="{Binding DisplayTitle}"
+                                                                                TextTrimming="CharacterEllipsis"
+                                                                                ToolTip="{Binding DisplayTitle}" />
+
+                                                                            <TextBlock
+                                                                                Margin="0,4,0,0"
+                                                                                Foreground="{DynamicResource App.TextMutedBrush}"
+                                                                                Text="{Binding MetadataLine}"
+                                                                                TextTrimming="CharacterEllipsis"
+                                                                                ToolTip="{Binding MetadataLine}">
+                                                                                <TextBlock.Style>
+                                                                                    <Style TargetType="TextBlock">
+                                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger Binding="{Binding HasMetadataLine}" Value="True">
+                                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </TextBlock.Style>
+                                                                            </TextBlock>
+
+                                                                            <TextBlock
+                                                                                Margin="0,4,0,0"
+                                                                                Foreground="{DynamicResource App.TextSecondaryBrush}"
+                                                                                Text="{Binding FileName}"
+                                                                                TextTrimming="CharacterEllipsis"
+                                                                                ToolTip="{Binding FileName}">
+                                                                                <TextBlock.Style>
+                                                                                    <Style TargetType="TextBlock">
+                                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                                        <Style.Triggers>
+                                                                                            <DataTrigger Binding="{Binding HasDistinctFileName}" Value="True">
+                                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                                            </DataTrigger>
+                                                                                        </Style.Triggers>
+                                                                                    </Style>
+                                                                                </TextBlock.Style>
+                                                                            </TextBlock>
+                                                                        </StackPanel>
 
                                                                         <StackPanel
                                                                             Grid.Column="3"
@@ -868,14 +926,6 @@
                                                                                     Text="&#xE8A7;" />
                                                                             </Button>
                                                                         </StackPanel>
-
-                                                                        <TextBlock
-                                                                            Grid.Row="1"
-                                                                            Grid.Column="2"
-                                                                            Margin="0,4,0,0"
-                                                                            Foreground="{DynamicResource App.TextSecondaryBrush}"
-                                                                            Text="{Binding FileName}"
-                                                                            TextTrimming="CharacterEllipsis" />
 
                                                                         <Grid
                                                                             Grid.Row="2"
@@ -1667,8 +1717,7 @@
                                             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
                                                 <Setter TargetName="CardRoot" Property="Background" Value="{DynamicResource App.SurfaceSelectedBrush}" />
                                                 <Setter TargetName="CardRoot" Property="BorderBrush" Value="{DynamicResource App.BorderSelectedBrush}" />
-                                                <Setter TargetName="CardRoot" Property="BorderThickness" Value="2" />
-                                                <Setter TargetName="SelectionStripe" Property="Background" Value="{DynamicResource App.SelectionStripeBrush}" />
+                                                <Setter TargetName="CardRoot" Property="BorderThickness" Value="6,2,2,2" />
                                                 <Setter TargetName="TypeBadge" Property="Background" Value="{DynamicResource App.SurfacePrimaryBrush}" />
                                                 <Setter TargetName="TypeBadge" Property="BorderBrush" Value="{DynamicResource App.BorderStrongBrush}" />
                                             </DataTrigger>

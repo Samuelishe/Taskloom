@@ -29,6 +29,10 @@ public sealed class RecordAudioDraft
 
     public double? DurationSeconds { get; set; }
 
+    public string? AlbumTitle { get; set; }
+
+    public string? Genre { get; set; }
+
     public string? CoverRelativePath { get; set; }
 
     public string? CoverPreviewPath { get; set; }

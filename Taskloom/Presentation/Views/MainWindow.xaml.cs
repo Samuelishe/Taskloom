@@ -210,6 +210,33 @@ public partial class MainWindow : Window
         }
     }
 
+    private void MainWindow_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel || viewModel.SelectedRecord is null)
+        {
+            return;
+        }
+
+        var source = e.OriginalSource as DependencyObject;
+
+        if (source is null)
+        {
+            return;
+        }
+
+        if (FindAncestor<ListBoxItem>(source) is not null)
+        {
+            return;
+        }
+
+        if (FindSelectionPreservingElement(source) is not null)
+        {
+            return;
+        }
+
+        viewModel.SelectedRecord = null;
+    }
+
     private void MinimizeButton_OnClick(object sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
@@ -460,6 +487,32 @@ public partial class MainWindow : Window
             if (source is Slider slider)
             {
                 return slider;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
+    }
+
+    private static DependencyObject? FindSelectionPreservingElement(DependencyObject? source)
+    {
+        return FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(source) as DependencyObject
+               ?? FindAncestor<System.Windows.Controls.Primitives.TextBoxBase>(source) as DependencyObject
+               ?? FindAncestor<PasswordBox>(source)
+               ?? FindAncestor<Slider>(source)
+               ?? FindAncestor<System.Windows.Controls.Primitives.ScrollBar>(source) as DependencyObject
+               ?? FindAncestor<Thumb>(source);
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? source)
+        where T : DependencyObject
+    {
+        while (source is not null)
+        {
+            if (source is T target)
+            {
+                return target;
             }
 
             source = VisualTreeHelper.GetParent(source);

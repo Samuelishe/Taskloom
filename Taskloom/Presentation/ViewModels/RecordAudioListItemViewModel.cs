@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Taskloom.Services.Media;
+using System.IO;
 
 namespace Taskloom.Presentation.ViewModels;
 
@@ -18,12 +19,16 @@ public sealed partial class RecordAudioListItemViewModel : ObservableObject, IDi
         string displayTitle,
         string? coverPath,
         double? durationSeconds,
+        string? albumTitle,
+        string? genre,
         IAudioPlaybackService audioPlaybackService)
     {
         Path = path;
         FileName = fileName;
         DisplayTitle = displayTitle;
         CoverPath = coverPath;
+        AlbumTitle = albumTitle;
+        Genre = genre;
         _metadataDuration = durationSeconds is > 0 ? TimeSpan.FromSeconds(durationSeconds.Value) : TimeSpan.Zero;
         _audioPlaybackService = audioPlaybackService ?? throw new ArgumentNullException(nameof(audioPlaybackService));
         _audioPlaybackService.PlaybackStateChanged += OnPlaybackStateChanged;
@@ -57,7 +62,37 @@ public sealed partial class RecordAudioListItemViewModel : ObservableObject, IDi
 
     public string? CoverPath { get; }
 
+    public string? AlbumTitle { get; }
+
+    public string? Genre { get; }
+
     public bool HasCover => !string.IsNullOrWhiteSpace(CoverPath);
+
+    public bool HasDistinctFileName =>
+        !string.Equals(DisplayTitle, FileName, StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(DisplayTitle, System.IO.Path.GetFileNameWithoutExtension(FileName), StringComparison.OrdinalIgnoreCase);
+
+    public bool HasMetadataLine =>
+        !string.IsNullOrWhiteSpace(AlbumTitle) ||
+        !string.IsNullOrWhiteSpace(Genre);
+
+    public string MetadataLine
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(AlbumTitle))
+            {
+                return Genre ?? string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(Genre))
+            {
+                return AlbumTitle;
+            }
+
+            return $"{AlbumTitle} • {Genre}";
+        }
+    }
 
     public string PlaybackGlyph => IsPlaying ? "■" : "▶";
 

@@ -30,4 +30,8 @@ public sealed class RecordAttachmentDataModel
     public double? DurationSeconds { get; set; }
 
     public string? PreviewRelativePath { get; set; }
+
+    public string? AlbumTitle { get; set; }
+
+    public string? Genre { get; set; }
 }

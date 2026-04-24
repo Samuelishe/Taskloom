@@ -11,8 +11,9 @@ public sealed class TaskRecord : CalendarRecord
         string title,
         string? details,
         bool isCompleted = false,
-        TimeOnly? reminderTime = null)
-        : base(id, RecordType.Task, date, title, details)
+        TimeOnly? reminderTime = null,
+        DateTime? createdUtc = null)
+        : base(id, RecordType.Task, date, title, details, createdUtc)
     {
         IsCompleted = isCompleted;
         ReminderTime = reminderTime;

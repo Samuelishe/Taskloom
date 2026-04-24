@@ -29,6 +29,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date AS Date,
                                title AS Title,
                                details AS Details,
+                               created_utc AS CreatedUtc,
                                is_completed AS IsCompleted,
                                task_reminder_time AS TaskReminderTime,
                                start_time AS StartTime,
@@ -67,6 +68,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date AS Date,
                                title AS Title,
                                details AS Details,
+                               created_utc AS CreatedUtc,
                                is_completed AS IsCompleted,
                                task_reminder_time AS TaskReminderTime,
                                start_time AS StartTime,
@@ -112,6 +114,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date AS Date,
                                title AS Title,
                                details AS Details,
+                               created_utc AS CreatedUtc,
                                is_completed AS IsCompleted,
                                task_reminder_time AS TaskReminderTime,
                                start_time AS StartTime,
@@ -150,6 +153,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date,
                                title,
                                details,
+                               created_utc,
                                is_completed,
                                task_reminder_time,
                                start_time,
@@ -165,6 +169,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                @Date,
                                @Title,
                                @Details,
+                               @CreatedUtc,
                                @IsCompleted,
                                @TaskReminderTime,
                                @StartTime,
@@ -178,6 +183,7 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                record_date = excluded.record_date,
                                title = excluded.title,
                                details = excluded.details,
+                               created_utc = excluded.created_utc,
                                is_completed = excluded.is_completed,
                                task_reminder_time = excluded.task_reminder_time,
                                start_time = excluded.start_time,
@@ -223,7 +229,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                                    sort_order,
                                                    display_title,
                                                    duration_seconds,
-                                                   preview_relative_path
+                                                   preview_relative_path,
+                                                   album_title,
+                                                   genre
                                                )
                                                VALUES
                                                (
@@ -239,7 +247,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                                    @SortOrder,
                                                    @DisplayTitle,
                                                    @DurationSeconds,
-                                                   @PreviewRelativePath
+                                                   @PreviewRelativePath,
+                                                   @AlbumTitle,
+                                                   @Genre
                                                );
                                                """;
 
@@ -293,13 +303,15 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 dataModel.Title,
                 dataModel.Details,
                 dataModel.IsCompleted ?? false,
-                ParseOptionalTime(dataModel.TaskReminderTime)),
+                ParseOptionalTime(dataModel.TaskReminderTime),
+                ParseRequiredUtc(dataModel.CreatedUtc)),
 
             RecordType.Note => new NoteRecord(
                 id,
                 date,
                 dataModel.Title,
-                dataModel.Details),
+                dataModel.Details,
+                ParseRequiredUtc(dataModel.CreatedUtc)),
 
             RecordType.Event => new EventRecord(
                 id,
@@ -310,13 +322,15 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                 ParseRequiredTime(dataModel.EndTime, nameof(dataModel.EndTime)),
                 dataModel.Location,
                 (EventStatus)(dataModel.EventStatusId ?? (int)EventStatus.Scheduled),
-                dataModel.ReminderMinutesBefore ?? 60),
+                dataModel.ReminderMinutesBefore ?? 60,
+                ParseRequiredUtc(dataModel.CreatedUtc)),
 
             RecordType.DaySummary => new DaySummaryRecord(
                 id,
                 date,
                 dataModel.Title,
-                dataModel.Details),
+                dataModel.Details,
+                ParseRequiredUtc(dataModel.CreatedUtc)),
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {dataModel.TypeId}.")
         };
@@ -330,7 +344,8 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
             TypeId = (int)record.Type,
             Date = record.Date.ToString("yyyy-MM-dd"),
             Title = record.Title,
-            Details = record.Details
+            Details = record.Details,
+            CreatedUtc = record.CreatedUtc.ToString("O")
         };
 
         switch (record)
@@ -368,7 +383,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
             SortOrder = attachment.SortOrder,
             DisplayTitle = attachment.DisplayTitle,
             DurationSeconds = attachment.DurationSeconds,
-            PreviewRelativePath = attachment.PreviewRelativePath
+            PreviewRelativePath = attachment.PreviewRelativePath,
+            AlbumTitle = attachment.AlbumTitle,
+            Genre = attachment.Genre
         };
     }
 
@@ -387,7 +404,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
             dataModel.SortOrder,
             dataModel.DisplayTitle,
             dataModel.DurationSeconds,
-            dataModel.PreviewRelativePath);
+            dataModel.PreviewRelativePath,
+            dataModel.AlbumTitle,
+            dataModel.Genre);
     }
 
     private static void AttachAttachments(
@@ -432,7 +451,9 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
                                sort_order AS SortOrder,
                                display_title AS DisplayTitle,
                                duration_seconds AS DurationSeconds,
-                               preview_relative_path AS PreviewRelativePath
+                               preview_relative_path AS PreviewRelativePath,
+                               album_title AS AlbumTitle,
+                               genre AS Genre
                            FROM record_attachments
                            WHERE record_id IN @RecordIds
                            ORDER BY sort_order, created_utc;
@@ -464,5 +485,15 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
         return string.IsNullOrWhiteSpace(value)
             ? null
             : TimeOnly.ParseExact(value, "HH:mm");
+    }
+
+    private static DateTime ParseRequiredUtc(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return DateTime.UtcNow;
+        }
+
+        return DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
     }
 }

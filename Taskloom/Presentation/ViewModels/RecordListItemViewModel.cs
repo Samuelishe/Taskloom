@@ -18,6 +18,7 @@ public sealed class RecordListItemViewModel : IDisposable
         string? details,
         string timeDisplay,
         bool isCompleted,
+        DateTime createdUtc,
         IReadOnlyList<RecordImageListItemViewModel>? images = null,
         IReadOnlyList<RecordAudioListItemViewModel>? audios = null,
         string? locationDisplay = null,
@@ -33,6 +34,7 @@ public sealed class RecordListItemViewModel : IDisposable
         Details = details;
         TimeDisplay = timeDisplay;
         IsCompleted = isCompleted;
+        CreatedUtc = createdUtc;
         Images = images ?? [];
         Audios = audios ?? [];
         VisibleImages = Images.Take(9).ToArray();
@@ -56,6 +58,10 @@ public sealed class RecordListItemViewModel : IDisposable
     public string TimeDisplay { get; }
 
     public bool IsCompleted { get; }
+
+    public DateTime CreatedUtc { get; }
+
+    public string CreatedAtDisplay => CreatedUtc.ToLocalTime().ToString("HH:mm");
 
     public bool IsTask => Type == RecordType.Task;
 
@@ -157,6 +163,8 @@ public sealed class RecordListItemViewModel : IDisposable
                     : attachment.DisplayTitle,
                 audioStorageService.GetAbsolutePath(attachment.PreviewRelativePath),
                 attachment.DurationSeconds,
+                attachment.AlbumTitle,
+                attachment.Genre,
                 audioPlaybackService))
             .Where(static item => !string.IsNullOrWhiteSpace(item.Path))
             .ToArray();
@@ -171,6 +179,7 @@ public sealed class RecordListItemViewModel : IDisposable
                 taskRecord.Details,
                 localizationService.GetString("RecordList.TaskLabel"),
                 taskRecord.IsCompleted,
+                taskRecord.CreatedUtc,
                 images,
                 audios,
                 null,
@@ -189,6 +198,7 @@ public sealed class RecordListItemViewModel : IDisposable
                 noteRecord.Details,
                 localizationService.GetString("RecordList.NoteAnyTime"),
                 false,
+                noteRecord.CreatedUtc,
                 images,
                 audios),
 
@@ -200,6 +210,7 @@ public sealed class RecordListItemViewModel : IDisposable
                 eventRecord.Details,
                 $"{eventRecord.StartTime:HH\\:mm} - {eventRecord.EndTime:HH\\:mm}",
                 false,
+                eventRecord.CreatedUtc,
                 images,
                 audios,
                 string.IsNullOrWhiteSpace(eventRecord.Location)
@@ -216,6 +227,7 @@ public sealed class RecordListItemViewModel : IDisposable
                 summaryRecord.Details,
                 localizationService.GetString("RecordList.DaySummaryLabel"),
                 false,
+                summaryRecord.CreatedUtc,
                 images,
                 audios),
 

@@ -719,6 +719,8 @@ public partial class RecordEditorViewModel : ObservableObject
                 SourceFilePath = audio.SourceFilePath,
                 DisplayTitle = audio.DisplayTitle,
                 DurationSeconds = audio.DurationSeconds,
+                AlbumTitle = audio.AlbumTitle,
+                Genre = audio.Genre,
                 CoverRelativePath = audio.CoverRelativePath,
                 CoverPreviewPath = audio.IsPendingImport
                     ? audio.CoverPreviewPath
@@ -793,6 +795,8 @@ public partial class RecordEditorViewModel : ObservableObject
             SourceFilePath = audio.SourceFilePath,
             DisplayTitle = audio.DisplayTitle,
             DurationSeconds = audio.DurationSeconds,
+            AlbumTitle = audio.AlbumTitle,
+            Genre = audio.Genre,
             CoverRelativePath = audio.CoverRelativePath,
             CoverPreviewPath = audio.CoverPreviewPath,
             CoverBytes = audio.CoverBytes

@@ -31,6 +31,11 @@ public sealed class CalendarRecordDataModel
     public string? Details { get; set; }
 
     /// <summary>
+    /// Момент создания записи в формате ISO 8601 UTC.
+    /// </summary>
+    public string CreatedUtc { get; set; } = string.Empty;
+
+    /// <summary>
     /// Признак завершения задачи.
     /// </summary>
     public bool? IsCompleted { get; set; }

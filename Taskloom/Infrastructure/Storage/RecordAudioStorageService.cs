@@ -45,6 +45,8 @@ public sealed class RecordAudioStorageService : IRecordAudioStorageService
         string title = fileInfo.Name;
         double? durationSeconds = null;
         byte[]? coverBytes = null;
+        string? albumTitle = null;
+        string? genre = null;
 
         try
         {
@@ -52,6 +54,12 @@ public sealed class RecordAudioStorageService : IRecordAudioStorageService
             title = string.IsNullOrWhiteSpace(tagFile.Tag?.Title)
                 ? fileInfo.Name
                 : tagFile.Tag.Title.Trim();
+            albumTitle = string.IsNullOrWhiteSpace(tagFile.Tag?.Album)
+                ? null
+                : tagFile.Tag.Album.Trim();
+            genre = tagFile.Tag?.Genres?
+                .FirstOrDefault(static value => !string.IsNullOrWhiteSpace(value))?
+                .Trim();
             coverBytes = tagFile.Tag?.Pictures?.FirstOrDefault()?.Data?.Data;
             durationSeconds = tagFile.Properties?.Duration.TotalSeconds > 0
                 ? tagFile.Properties.Duration.TotalSeconds
@@ -71,6 +79,8 @@ public sealed class RecordAudioStorageService : IRecordAudioStorageService
             SortOrder = sortOrder,
             DisplayTitle = title,
             DurationSeconds = durationSeconds,
+            AlbumTitle = albumTitle,
+            Genre = genre,
             CoverBytes = coverBytes
         });
     }
@@ -142,7 +152,9 @@ public sealed class RecordAudioStorageService : IRecordAudioStorageService
             draft.SortOrder,
             draft.DisplayTitle,
             draft.DurationSeconds,
-            previewRelativePath);
+            previewRelativePath,
+            draft.AlbumTitle,
+            draft.Genre);
     }
 
     public string? GetAbsolutePath(string? relativePath)

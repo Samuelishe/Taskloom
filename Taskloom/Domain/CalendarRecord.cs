@@ -7,13 +7,14 @@ public abstract class CalendarRecord
 {
     private List<RecordAttachment> _attachments = [];
 
-    protected CalendarRecord(Guid id, RecordType type, DateOnly date, string title, string? details)
+    protected CalendarRecord(Guid id, RecordType type, DateOnly date, string title, string? details, DateTime? createdUtc = null)
     {
         Id = id == Guid.Empty ? Guid.NewGuid() : id;
         Type = type;
         Date = date;
         Title = NormalizeRequiredText(title, nameof(title), 200);
         Details = NormalizeOptionalText(details, 4000);
+        CreatedUtc = NormalizeUtc(createdUtc ?? DateTime.UtcNow);
     }
 
     public Guid Id { get; }
@@ -25,6 +26,8 @@ public abstract class CalendarRecord
     public string Title { get; private set; }
 
     public string? Details { get; private set; }
+
+    public DateTime CreatedUtc { get; }
 
     public IReadOnlyList<RecordAttachment> Attachments => _attachments;
 
@@ -107,5 +110,12 @@ public abstract class CalendarRecord
         }
 
         return normalizedValue;
+    }
+
+    private static DateTime NormalizeUtc(DateTime value)
+    {
+        return value.Kind == DateTimeKind.Utc
+            ? value
+            : value.ToUniversalTime();
     }
 }

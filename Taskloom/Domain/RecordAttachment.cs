@@ -18,7 +18,9 @@ public sealed class RecordAttachment
         int sortOrder = 0,
         string? displayTitle = null,
         double? durationSeconds = null,
-        string? previewRelativePath = null)
+        string? previewRelativePath = null,
+        string? albumTitle = null,
+        string? genre = null)
     {
         Id = id == Guid.Empty ? Guid.NewGuid() : id;
         RecordId = recordId == Guid.Empty ? throw new ArgumentException("Идентификатор записи обязателен.", nameof(recordId)) : recordId;
@@ -51,6 +53,8 @@ public sealed class RecordAttachment
         DisplayTitle = NormalizeOptionalText(displayTitle, 260);
         DurationSeconds = durationSeconds;
         PreviewRelativePath = NormalizeOptionalText(previewRelativePath, 512);
+        AlbumTitle = NormalizeOptionalText(albumTitle, 260);
+        Genre = NormalizeOptionalText(genre, 120);
     }
 
     public Guid Id { get; }
@@ -82,6 +86,10 @@ public sealed class RecordAttachment
     public double? DurationSeconds { get; }
 
     public string? PreviewRelativePath { get; }
+
+    public string? AlbumTitle { get; }
+
+    public string? Genre { get; }
 
     private static string NormalizeRequiredText(string value, string paramName, int maxLength)
     {

@@ -1,5 +1,23 @@
 # Журнал работ
 
+## 2026-04-24 - Ховер-подсказки строк и снятие выделения записи
+
+### Что сделано
+
+- Для обрезаемых строк в карточках записей добавлены tooltip-подсказки с полным значением: заголовок, место события, описание, title аудио, строка `album • genre` и имя файла.
+- Бейдж времени создания приведён к общей системе chips: теперь он использует ту же геометрию и типографический стиль, но остаётся более приглушённым.
+- Выделение записи переработано: вместо отдельной синей полосы карточка теперь получает утолщённую левую границу собственной рамки, поэтому исчезают пиксельные артефакты на скруглениях.
+- Добавлено снятие выделения записи кликом по пустым областям окна и неинтерактивным поверхностям вне карточек.
+- После снятия выделения `SelectedRecord` становится `null`, поэтому команды редактирования и удаления автоматически возвращаются в неактивное состояние.
+
+### Изменённые файлы
+
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/WorkLog.md`
+
 ## 2026-04-24 - Стабилизация настроек, карточек и подтверждающих окон
 
 ### Что сделано
@@ -39,6 +57,51 @@
 - Системный `MessageBox` визуально конфликтовал с theme-aware интерфейсом и не наследовал активную тему приложения.
 - Параллельные сохранения `settings.json` уже приводили к падению приложения при закрытии окна после быстрых переключений настроек.
 - Карточки записей должны сохранять естественный reading order сверху вниз, даже если соседние карточки в ряду выше.
+
+## 2026-04-24 - Время создания записей и расширенные аудио-метаданные
+
+### Что сделано
+
+- Для всех записей добавлено persisted-поле `created_utc`.
+- В карточке записи добавлен компактный слабоконтрастный бейдж времени создания `HH:mm`.
+- Для audio attachments добавлены nullable-поля `album_title` и `genre`.
+- `RecordAudioStorageService` теперь читает album и genre из тегов файла, если они есть.
+- В карточке аудио рядом с названием трека показывается компактная muted-строка `album • genre`, только если метаданные реально присутствуют.
+- Убрано смысловое дублирование `DisplayTitle + FileName`: имя файла скрывается, если оно совпадает с title полностью или по имени без расширения.
+- Обновлены SQLite schema, миграции и маппинг repository/service/presentation-слоёв.
+- Сборка `dotnet build .\Taskloom.sln --no-restore` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `Taskloom/Data/Models/CalendarRecordDataModel.cs`
+- `Taskloom/Data/Models/RecordAttachmentDataModel.cs`
+- `Taskloom/Data/Sql/CreateSchema.sql`
+- `Taskloom/Domain/CalendarRecord.cs`
+- `Taskloom/Domain/DaySummaryRecord.cs`
+- `Taskloom/Domain/EventRecord.cs`
+- `Taskloom/Domain/NoteRecord.cs`
+- `Taskloom/Domain/RecordAttachment.cs`
+- `Taskloom/Domain/TaskRecord.cs`
+- `Taskloom/Infrastructure/Repositories/SqliteCalendarRecordRepository.cs`
+- `Taskloom/Infrastructure/Storage/RecordAudioStorageService.cs`
+- `Taskloom/Infrastructure/Storage/SqliteDatabaseInitializer.cs`
+- `Taskloom/Presentation/ViewModels/RecordAudioListItemViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordEditorViewModel.cs`
+- `Taskloom/Presentation/ViewModels/RecordListItemViewModel.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Services/Records/CalendarRecordService.cs`
+- `Taskloom/Services/Records/RecordAudioDraft.cs`
+- `README.md`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Пользователь должен видеть момент создания записи без тяжёлого визуального акцента и без шума в карточке.
+- Audio metadata полезна только как лёгкая дополнительная подсказка; при отсутствии album/genre контейнер плеера не должен заметно раздуваться.
+- Дублирование заголовка трека и имени файла делает карточку визуально тяжелее и не добавляет пользы.
 
 ## 2026-04-24 - Startup cleanup, instant-apply settings и per-record resource folders
 

@@ -166,13 +166,15 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 draft.Title,
                 draft.Details,
                 draft.IsCompleted,
-                draft.TaskReminderTime),
+                draft.TaskReminderTime,
+                existingRecord?.CreatedUtc),
 
             RecordType.Note => new NoteRecord(
                 id,
                 draft.Date,
                 draft.Title,
-                draft.Details),
+                draft.Details,
+                existingRecord?.CreatedUtc),
 
             RecordType.Event => new EventRecord(
                 id,
@@ -183,13 +185,15 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 GetRequiredTime(draft.EndTime, nameof(draft.EndTime)),
                 draft.Location,
                 draft.EventStatus,
-                draft.ReminderMinutesBefore),
+                draft.ReminderMinutesBefore,
+                existingRecord?.CreatedUtc),
 
             RecordType.DaySummary => new DaySummaryRecord(
                 id,
                 draft.Date,
                 draft.Title,
-                draft.Details),
+                draft.Details,
+                existingRecord?.CreatedUtc),
 
             _ => throw new InvalidOperationException($"Неподдерживаемый тип записи: {draft.Type}.")
         };
@@ -358,7 +362,9 @@ public sealed class CalendarRecordService : ICalendarRecordService
                 audioDraft.SortOrder,
                 audioDraft.DisplayTitle,
                 audioDraft.DurationSeconds,
-                audioDraft.CoverRelativePath));
+                audioDraft.CoverRelativePath,
+                audioDraft.AlbumTitle,
+                audioDraft.Genre));
         }
 
         return (attachments, importedRelativePaths);
@@ -445,7 +451,9 @@ public sealed class CalendarRecordService : ICalendarRecordService
             SortOrder = attachment.SortOrder,
             DisplayTitle = attachment.DisplayTitle,
             DurationSeconds = attachment.DurationSeconds,
-            CoverRelativePath = attachment.PreviewRelativePath
+            CoverRelativePath = attachment.PreviewRelativePath,
+            AlbumTitle = attachment.AlbumTitle,
+            Genre = attachment.Genre
         };
     }
 

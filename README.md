@@ -77,6 +77,9 @@ The app is designed as a local-first personal planner with a calendar-first work
 - Track title from metadata when available
 - File name fallback when metadata is missing
 - Cover art support when present
+- Compact album / genre metadata when available
+- Duplicate file name line is hidden when it does not add information
+- Full text is available on hover for trimmed record and audio lines without expanding the card layout
 
 ### 🔗 Smart links in descriptions
 Taskloom detects and makes links clickable directly inside record descriptions, including:
@@ -99,6 +102,8 @@ Links are opened through the system handler.
 - Instant-apply settings for theme, language, and cleanup policy
 - Themed in-app confirmation dialogs instead of default system message boxes
 - Adaptive record card layout
+- Compact created-time badge on every record card
+- Click empty space to clear record selection
 - Tray mode for background operation
 
 ### 🌍 Localization

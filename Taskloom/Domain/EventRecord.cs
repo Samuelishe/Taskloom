@@ -14,8 +14,9 @@ public sealed class EventRecord : CalendarRecord
         TimeOnly endTime,
         string? location = null,
         EventStatus status = EventStatus.Scheduled,
-        int reminderMinutesBefore = 60)
-        : base(id, RecordType.Event, date, title, details)
+        int reminderMinutesBefore = 60,
+        DateTime? createdUtc = null)
+        : base(id, RecordType.Event, date, title, details, createdUtc)
     {
         SetSchedule(startTime, endTime);
         Location = NormalizeOptionalText(location, 300);
