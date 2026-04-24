@@ -128,6 +128,8 @@ Taskloom - персональное desktop-приложение для Windows,
 - Основной транспорт уведомлений теперь реализован через Windows App SDK `AppNotificationManager`.
 - `WindowsBalloonAppNotificationService` сохранён как fallback, если Windows App SDK notifications недоступны в текущей среде или регистрация не удалась.
 - Для Windows App SDK проект переведён на `net10.0-windows10.0.19041.0`, добавлены `WindowsPackageType=None` и runtime identifiers.
+- Для сборки и проверки проекта нужно использовать `dotnet` из Rider с SDK 10, а не системный `C:\Program Files\dotnet\dotnet.exe`, если тот видит только SDK 9 и не умеет собирать `net10.0-windows10.0.19041.0`.
+- Предпочтительная команда проверки: `C:\Program Files\JetBrains\JetBrains Rider 2026.1.0.1\lib\ReSharperHost\windows-x64\dotnet\dotnet.exe build .\Taskloom.sln`.
 - Для рабочего notification flow на пользовательской машине требуется установленный пакет Windows App Runtime 1.8, включая `MicrosoftCorporationII.WinAppRuntime.Main.1.8` и `MicrosoftCorporationII.WinAppRuntime.Singleton`.
 - Для задач добавлено собственное nullable-время напоминания `TaskReminderTime`; оно хранится отдельно от event-only поля `ReminderMinutesBefore`.
 - Для всех типов записей добавлено несколько изображений-вложений через отдельную таблицу `record_attachments`; файл копируется в `%LocalAppData%\Taskloom\Media\Images`.

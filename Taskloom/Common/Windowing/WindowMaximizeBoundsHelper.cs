@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Interop;
 
 namespace Taskloom.Common.Windowing;
@@ -71,8 +72,31 @@ public static class WindowMaximizeBoundsHelper
         minMaxInfo.MaxPosition.Y = workArea.Top - monitorArea.Top;
         minMaxInfo.MaxSize.X = workArea.Right - workArea.Left;
         minMaxInfo.MaxSize.Y = workArea.Bottom - workArea.Top;
+        ApplyMinimumTrackSize(hwnd, ref minMaxInfo);
 
         Marshal.StructureToPtr(minMaxInfo, lParam, true);
+    }
+
+    private static void ApplyMinimumTrackSize(IntPtr hwnd, ref MinMaxInfo minMaxInfo)
+    {
+        var source = HwndSource.FromHwnd(hwnd);
+
+        if (source?.RootVisual is not Window window)
+        {
+            return;
+        }
+
+        var dpi = VisualTreeHelper.GetDpi(window);
+
+        if (window.MinWidth > 0d)
+        {
+            minMaxInfo.MinTrackSize.X = (int)Math.Ceiling(window.MinWidth * dpi.DpiScaleX);
+        }
+
+        if (window.MinHeight > 0d)
+        {
+            minMaxInfo.MinTrackSize.Y = (int)Math.Ceiling(window.MinHeight * dpi.DpiScaleY);
+        }
     }
 
     [DllImport("user32.dll")]

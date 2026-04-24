@@ -14,6 +14,12 @@ namespace Taskloom.Presentation.Views;
 
 public partial class MainWindow : Window
 {
+    private const double NarrowWindowBreakpoint = 1200d;
+    private const double CompactHeaderBreakpoint = 1080d;
+    private const double CompactTitleBreakpoint = 1040d;
+    private const double NarrowSidebarMinWidth = 620d;
+    private const double NarrowSidebarMaxWidth = 760d;
+
     private RecordEditorWindow? _editorWindow;
     private SettingsWindow? _settingsWindow;
     private bool _isWindowPlacementSaved;
@@ -37,6 +43,8 @@ public partial class MainWindow : Window
         WindowMaximizeBoundsHelper.Attach(this);
         DataContextChanged += OnDataContextChanged;
         SourceInitialized += OnSourceInitialized;
+        Loaded += OnLoaded;
+        SizeChanged += OnWindowSizeChanged;
     }
 
     private async void OnSourceInitialized(object? sender, EventArgs e)
@@ -58,6 +66,21 @@ public partial class MainWindow : Window
         WindowState = string.Equals(settings.MainWindowState, nameof(System.Windows.WindowState.Maximized), StringComparison.Ordinal)
             ? WindowState.Maximized
             : WindowState.Normal;
+
+        UpdateResponsiveLayout();
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        UpdateResponsiveLayout();
+    }
+
+    private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (e.WidthChanged)
+        {
+            UpdateResponsiveLayout();
+        }
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -221,6 +244,84 @@ public partial class MainWindow : Window
         {
             DragMove();
         }
+    }
+
+    private void UpdateResponsiveLayout()
+    {
+        var windowWidth = ActualWidth > 0d ? ActualWidth : Width;
+        var isNarrowLayout = windowWidth < NarrowWindowBreakpoint;
+        var isCompactHeader = windowWidth < CompactHeaderBreakpoint;
+        var isCompactTitle = windowWidth < CompactTitleBreakpoint;
+
+        ApplyMainContentLayout(isNarrowLayout);
+        ApplyRecordsHeaderLayout(isCompactHeader);
+        WindowSubtitleText.Visibility = isCompactTitle ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void ApplyMainContentLayout(bool isNarrowLayout)
+    {
+        var windowWidth = ActualWidth > 0d ? ActualWidth : Width;
+        var narrowSidebarWidth = Math.Clamp(windowWidth - 96d, NarrowSidebarMinWidth, NarrowSidebarMaxWidth);
+
+        MainContentGrid.Margin = isNarrowLayout
+            ? new Thickness(16, 0, 16, 16)
+            : new Thickness(24, 0, 24, 24);
+
+        MainContentGrid.ColumnDefinitions[0].Width = isNarrowLayout
+            ? new GridLength(1d, GridUnitType.Star)
+            : new GridLength(500d);
+        MainContentGrid.ColumnDefinitions[1].Width = isNarrowLayout
+            ? new GridLength(0d)
+            : new GridLength(24d);
+        MainContentGrid.ColumnDefinitions[2].Width = isNarrowLayout
+            ? new GridLength(0d)
+            : new GridLength(1d, GridUnitType.Star);
+
+        MainContentGrid.RowDefinitions[0].Height = isNarrowLayout
+            ? GridLength.Auto
+            : new GridLength(1d, GridUnitType.Star);
+        MainContentGrid.RowDefinitions[1].Height = isNarrowLayout
+            ? new GridLength(20d)
+            : new GridLength(0d);
+        MainContentGrid.RowDefinitions[2].Height = isNarrowLayout
+            ? new GridLength(1d, GridUnitType.Star)
+            : new GridLength(0d);
+
+        Grid.SetColumn(SidebarPanel, 0);
+        Grid.SetColumnSpan(SidebarPanel, 1);
+        Grid.SetRow(SidebarPanel, 0);
+        SidebarPanel.HorizontalAlignment = isNarrowLayout
+            ? System.Windows.HorizontalAlignment.Center
+            : System.Windows.HorizontalAlignment.Stretch;
+        SidebarPanel.MaxWidth = isNarrowLayout ? narrowSidebarWidth : double.PositiveInfinity;
+        SidebarPanel.Width = isNarrowLayout ? narrowSidebarWidth : double.NaN;
+        SidebarPanel.Padding = isNarrowLayout ? new Thickness(20) : new Thickness(24);
+        SidebarContentPanel.MaxWidth = isNarrowLayout ? narrowSidebarWidth - 40d : double.PositiveInfinity;
+        CalendarViewbox.MaxWidth = isNarrowLayout ? narrowSidebarWidth - 80d : double.PositiveInfinity;
+        SidebarNavigationGrid.MaxWidth = isNarrowLayout ? narrowSidebarWidth - 120d : double.PositiveInfinity;
+
+        Grid.SetColumn(RecordsPanel, isNarrowLayout ? 0 : 2);
+        Grid.SetColumnSpan(RecordsPanel, 1);
+        Grid.SetRow(RecordsPanel, isNarrowLayout ? 2 : 0);
+        RecordsPanel.Padding = isNarrowLayout ? new Thickness(20) : new Thickness(24);
+    }
+
+    private void ApplyRecordsHeaderLayout(bool isCompactHeader)
+    {
+        RecordsHeaderGrid.RowDefinitions[1].Height = isCompactHeader
+            ? GridLength.Auto
+            : new GridLength(0d);
+        RecordsHeaderGrid.ColumnDefinitions[1].Width = isCompactHeader
+            ? new GridLength(0d)
+            : new GridLength(220d);
+
+        Grid.SetColumn(RecordsFilterPanel, isCompactHeader ? 0 : 1);
+        Grid.SetRow(RecordsFilterPanel, isCompactHeader ? 1 : 0);
+        RecordsFilterPanel.Margin = isCompactHeader ? new Thickness(0, 16, 0, 0) : new Thickness(0);
+        RecordsFilterPanel.HorizontalAlignment = isCompactHeader
+            ? System.Windows.HorizontalAlignment.Stretch
+            : System.Windows.HorizontalAlignment.Right;
+        FilterComboBox.Width = isCompactHeader ? double.NaN : 200d;
     }
 
     private void RecordsList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
