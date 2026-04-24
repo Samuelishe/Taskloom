@@ -16,6 +16,11 @@ public sealed class AppSettings
     public string ThemeId { get; set; } = "warm-light";
 
     /// <summary>
+    /// Политика автоматической очистки старых записей при запуске.
+    /// </summary>
+    public RecordCleanupMode RecordCleanupMode { get; set; } = RecordCleanupMode.Never;
+
+    /// <summary>
     /// Признак сохранённых параметров главного окна.
     /// </summary>
     public bool HasMainWindowPlacement { get; set; }

@@ -499,7 +499,7 @@
                 <WrapPanel
                     Grid.Row="1"
                     Margin="0,20,0,0"
-                    ItemHeight="42"
+                    ItemHeight="44"
                     Orientation="Horizontal">
                     <Button
                         MinWidth="130"

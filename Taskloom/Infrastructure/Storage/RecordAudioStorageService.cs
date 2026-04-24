@@ -101,7 +101,7 @@ public sealed class RecordAudioStorageService : IRecordAudioStorageService
             throw new InvalidOperationException("Поддерживаются только аудиофайлы MP3, WAV, M4A, FLAC, WMA и OGG.");
         }
 
-        var audioDirectory = TaskloomPaths.GetAudioDirectoryPath();
+        var audioDirectory = TaskloomPaths.GetRecordAudioDirectoryPath(recordId);
         Directory.CreateDirectory(audioDirectory);
 
         var storedFileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
@@ -117,17 +117,17 @@ public sealed class RecordAudioStorageService : IRecordAudioStorageService
 
         if (draft.CoverBytes is { Length: > 0 })
         {
-            var coversDirectory = TaskloomPaths.GetAudioCoversDirectoryPath();
+            var coversDirectory = TaskloomPaths.GetRecordAudioCoversDirectoryPath(recordId);
             Directory.CreateDirectory(coversDirectory);
 
             var coverFileName = $"{Guid.NewGuid():N}.jpg";
             var coverPath = Path.Combine(coversDirectory, coverFileName);
             await System.IO.File.WriteAllBytesAsync(coverPath, draft.CoverBytes, cancellationToken);
-            previewRelativePath = Path.Combine("Media", "AudioCovers", coverFileName);
+            previewRelativePath = Path.Combine("Records", recordId.ToString("D"), "audio-covers", coverFileName);
         }
 
         var sourceInfo = new FileInfo(sourceFilePath);
-        var relativePath = Path.Combine("Media", "Audio", storedFileName);
+        var relativePath = Path.Combine("Records", recordId.ToString("D"), "audio", storedFileName);
 
         return new RecordAttachment(
             Guid.NewGuid(),
@@ -165,5 +165,33 @@ public sealed class RecordAudioStorageService : IRecordAudioStorageService
         }
 
         System.IO.File.Delete(absolutePath);
+        CleanupEmptyRecordDirectories(absolutePath);
+    }
+
+    private static void CleanupEmptyRecordDirectories(string deletedAbsolutePath)
+    {
+        try
+        {
+            var recordsDirectoryPath = TaskloomPaths.GetRecordsDirectoryPath();
+            var currentDirectoryPath = Path.GetDirectoryName(deletedAbsolutePath);
+
+            while (!string.IsNullOrWhiteSpace(currentDirectoryPath) &&
+                   currentDirectoryPath.StartsWith(recordsDirectoryPath, StringComparison.OrdinalIgnoreCase) &&
+                   !string.Equals(currentDirectoryPath, recordsDirectoryPath, StringComparison.OrdinalIgnoreCase))
+            {
+                if (Directory.EnumerateFileSystemEntries(currentDirectoryPath).Any())
+                {
+                    break;
+                }
+
+                var parentDirectoryPath = Path.GetDirectoryName(currentDirectoryPath);
+                Directory.Delete(currentDirectoryPath, false);
+                currentDirectoryPath = parentDirectoryPath;
+            }
+        }
+        catch
+        {
+            // Ошибки фоновой очистки пустых каталогов не должны ломать удаление файла.
+        }
     }
 }

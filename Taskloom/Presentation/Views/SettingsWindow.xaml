@@ -7,9 +7,9 @@
         mc:Ignorable="d"
         Title="{markup:Loc Settings.WindowTitle}"
         Width="440"
-        Height="390"
+        Height="460"
         MinWidth="420"
-        MinHeight="360"
+        MinHeight="420"
         Background="{DynamicResource App.BorderStrongBrush}"
         Icon="/Assets/Icons/Taskloom.ico"
         WindowStartupLocation="CenterOwner"
@@ -65,8 +65,8 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
                 <TextBlock
@@ -87,6 +87,7 @@
                     <ComboBox
                         Margin="0,8,0,0"
                         ItemsSource="{Binding Languages}"
+                        DisplayMemberPath="Title"
                         SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}" />
                 </StackPanel>
 
@@ -95,23 +96,32 @@
                     <ComboBox
                         Margin="0,8,0,0"
                         ItemsSource="{Binding Themes}"
+                        DisplayMemberPath="Title"
                         SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" />
                 </StackPanel>
 
+                <StackPanel Grid.Row="4" Margin="0,18,0,0">
+                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Settings.Cleanup}" />
+                    <ComboBox
+                        x:Name="CleanupModeComboBox"
+                        Margin="0,8,0,0"
+                        ItemsSource="{Binding CleanupModes}"
+                        DisplayMemberPath="Title"
+                        SelectedItem="{Binding SelectedCleanupMode, Mode=TwoWay}"
+                        SelectionChanged="CleanupModeComboBox_OnSelectionChanged" />
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Foreground="{DynamicResource App.TextSecondaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="{markup:Loc Settings.CleanupDescription}" />
+                </StackPanel>
+
                 <TextBlock
-                    Grid.Row="4"
+                    Grid.Row="5"
                     Margin="0,16,0,0"
                     Foreground="{DynamicResource App.ErrorBrush}"
                     TextWrapping="Wrap"
                     Text="{Binding StatusText}" />
-
-                <Button
-                    Grid.Row="5"
-                    Width="120"
-                    HorizontalAlignment="Right"
-                    Style="{StaticResource PrimaryActionButtonStyle}"
-                    Command="{Binding SaveCommand}"
-                    Content="{markup:Loc Settings.Save}" />
             </Grid>
         </Grid>
     </Border>

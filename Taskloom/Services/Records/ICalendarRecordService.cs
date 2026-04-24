@@ -1,4 +1,5 @@
 using Taskloom.Domain;
+using Taskloom.Services.Settings;
 
 namespace Taskloom.Services.Records;
 
@@ -34,4 +35,9 @@ public interface ICalendarRecordService
     /// Переключает статус выполнения задачи.
     /// </summary>
     Task<TaskRecord> ToggleTaskCompletionAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Выполняет автоматическую очистку старых записей по выбранной политике.
+    /// </summary>
+    Task<int> CleanupOldRecordsAsync(RecordCleanupMode cleanupMode, CancellationToken cancellationToken = default);
 }

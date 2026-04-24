@@ -44,6 +44,7 @@ The app is designed as a local-first personal planner with a calendar-first work
 - Event start notification
 - Windows notification center support via Windows App SDK
 - Automatic fallback to tray balloon notifications if Windows App Runtime is unavailable
+- Startup cleanup policies for old records with safe and aggressive modes
 
 ### 🖼️ Rich attachments
 - Multiple image attachments per record
@@ -55,6 +56,8 @@ The app is designed as a local-first personal planner with a calendar-first work
   - `gif`
 - Image thumbnails in the record card
 - Click to open the original file with the system viewer
+- Per-record media folders under `%LocalAppData%\\Taskloom\\Records\\<record-id>`
+- Sidecar `record.json` metadata file for local record resources
 
 ### 🎵 Audio attachments
 - Multiple audio files per record
@@ -89,6 +92,7 @@ Links are opened through the system handler.
 - Built-in light, dark, OS-inspired, and custom themes
 - Custom title bars styled to match the app
 - Theme-aware controls
+- Instant-apply settings for theme, language, and cleanup policy
 - Adaptive record card layout
 - Tray mode for background operation
 
@@ -171,9 +175,10 @@ This includes:
 
 - SQLite database
 - settings file
-- imported images
-- imported audio files
-- extracted audio covers
+- per-record folders with imported images
+- per-record folders with imported audio files
+- per-record folders with extracted audio covers
+- per-record `record.json` metadata files
 - diagnostic logs
 
 ## 📚 Documentation

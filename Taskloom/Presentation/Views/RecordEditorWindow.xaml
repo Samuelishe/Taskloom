@@ -7,9 +7,9 @@
         xmlns:markup="clr-namespace:Taskloom.Common.Markup"
         mc:Ignorable="d"
         Title="{Binding EditorTitle}"
-        Width="640"
+        Width="700"
         Height="860"
-        MinWidth="560"
+        MinWidth="600"
         MinHeight="720"
         Background="{DynamicResource App.BorderStrongBrush}"
         Icon="/Assets/Icons/Taskloom.ico"
@@ -65,7 +65,13 @@
             </Grid>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <Grid Margin="24">
+                <Grid Margin="26">
+            <Grid.Resources>
+                <Style x:Key="EditorFieldLabelStyle" TargetType="TextBlock">
+                    <Setter Property="FontSize" Value="12" />
+                    <Setter Property="Foreground" Value="{DynamicResource App.TextMutedBrush}" />
+                </Style>
+            </Grid.Resources>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -78,7 +84,7 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0">
-                <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.RecordType}" />
+                <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.RecordType}" />
                 <ComboBox
                     Margin="0,6,0,0"
                     ItemsSource="{Binding RecordTypeOptions}"
@@ -88,38 +94,40 @@
             </StackPanel>
 
             <StackPanel Grid.Row="1" Margin="0,16,0,0">
-                <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Date}" />
+                <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.Date}" />
                 <DatePicker
-                    Width="260"
+                    Width="300"
                     HorizontalAlignment="Left"
                     Margin="0,6,0,0"
                     SelectedDate="{Binding DateValue, Mode=TwoWay}" />
             </StackPanel>
 
             <StackPanel Grid.Row="2" Margin="0,16,0,0">
-                <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Title}" />
+                <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.Title}" />
                 <TextBox
                     Margin="0,6,0,0"
                     Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
             <StackPanel Grid.Row="3" Margin="0,16,0,0">
-                <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Details}" />
+                <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.Details}" />
                 <TextBox
                     Margin="0,6,0,0"
                     AcceptsReturn="True"
-                    Height="120"
+                    Height="136"
+                    Padding="12,9"
+                    VerticalContentAlignment="Top"
                     TextWrapping="Wrap"
                     VerticalScrollBarVisibility="Auto"
                     Text="{Binding Details, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
-            <Border Grid.Row="4" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+            <Border Grid.Row="4" Margin="0,18,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="15">
                 <StackPanel>
-                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Images}" />
+                    <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.Images}" />
                     <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
                         <Button
-                            MinWidth="120"
+                            MinWidth="156"
                             Style="{StaticResource SecondaryActionButtonStyle}"
                             Click="BrowseImagesButton_OnClick"
                             Content="{markup:Loc Editor.AttachImages}" />
@@ -188,31 +196,31 @@
 
                                         <WrapPanel Margin="0,8,0,0">
                                             <Button
-                                                Width="36"
-                                                Height="30"
+                                                Width="34"
+                                                Height="34"
                                                 Click="MoveImageLeftButton_OnClick"
                                                 Content="←"
                                                 Tag="{Binding}"
                                                 ToolTip="{markup:Loc Editor.MoveImageLeft}"
-                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                                Style="{StaticResource CompactActionButtonStyle}" />
                                             <Button
-                                                Width="36"
-                                                Height="30"
+                                                Width="34"
+                                                Height="34"
                                                 Margin="6,0,0,0"
                                                 Click="MoveImageRightButton_OnClick"
                                                 Content="→"
                                                 Tag="{Binding}"
                                                 ToolTip="{markup:Loc Editor.MoveImageRight}"
-                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                                Style="{StaticResource CompactActionButtonStyle}" />
                                             <Button
-                                                Width="36"
-                                                Height="30"
+                                                Width="34"
+                                                Height="34"
                                                 Margin="6,0,0,0"
                                                 Click="RemoveImageButton_OnClick"
                                                 Content="✕"
                                                 Tag="{Binding}"
                                                 ToolTip="{markup:Loc Editor.RemoveImage}"
-                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                                Style="{StaticResource CompactActionButtonStyle}" />
                                         </WrapPanel>
                                     </StackPanel>
                                 </Border>
@@ -222,12 +230,12 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="5" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+            <Border Grid.Row="5" Margin="0,18,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="15">
                 <StackPanel>
-                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Audio}" />
+                    <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.Audio}" />
                     <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
                         <Button
-                            MinWidth="120"
+                            MinWidth="156"
                             Style="{StaticResource SecondaryActionButtonStyle}"
                             Click="BrowseAudiosButton_OnClick"
                             Content="{markup:Loc Editor.AttachAudio}" />
@@ -312,31 +320,31 @@
 
                                         <WrapPanel Grid.Column="3" Margin="12,0,0,0" VerticalAlignment="Center">
                                             <Button
-                                                Width="36"
-                                                Height="30"
+                                                Width="34"
+                                                Height="34"
                                                 Click="MoveAudioLeftButton_OnClick"
                                                 Content="←"
                                                 Tag="{Binding}"
                                                 ToolTip="{markup:Loc Editor.MoveAudioLeft}"
-                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                                Style="{StaticResource CompactActionButtonStyle}" />
                                             <Button
-                                                Width="36"
-                                                Height="30"
+                                                Width="34"
+                                                Height="34"
                                                 Margin="6,0,0,0"
                                                 Click="MoveAudioRightButton_OnClick"
                                                 Content="→"
                                                 Tag="{Binding}"
                                                 ToolTip="{markup:Loc Editor.MoveAudioRight}"
-                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                                Style="{StaticResource CompactActionButtonStyle}" />
                                             <Button
-                                                Width="36"
-                                                Height="30"
+                                                Width="34"
+                                                Height="34"
                                                 Margin="6,0,0,0"
                                                 Click="RemoveAudioButton_OnClick"
                                                 Content="✕"
                                                 Tag="{Binding}"
                                                 ToolTip="{markup:Loc Editor.RemoveAudio}"
-                                                Style="{StaticResource SecondaryActionButtonStyle}" />
+                                                Style="{StaticResource CompactActionButtonStyle}" />
                                         </WrapPanel>
                                     </Grid>
                                 </Border>
@@ -346,7 +354,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="6" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+            <Border Grid.Row="6" Margin="0,18,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="15">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -358,7 +366,7 @@
                     </Style>
                 </Border.Style>
                 <StackPanel>
-                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.TaskOptions}" />
+                    <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.TaskOptions}" />
                     <CheckBox
                         Margin="0,8,0,0"
                         Content="{markup:Loc Editor.Completed}"
@@ -380,7 +388,7 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.TaskReminderTime}" />
+                        <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.TaskReminderTime}" />
                         <Grid Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -413,7 +421,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="7" Margin="0,16,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="14">
+            <Border Grid.Row="7" Margin="0,18,0,0" Background="{DynamicResource App.SurfaceMutedBrush}" CornerRadius="12" Padding="15">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -425,7 +433,7 @@
                     </Style>
                 </Border.Style>
                 <StackPanel>
-                    <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.EventOptions}" />
+                    <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.EventOptions}" />
                     <Grid Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -434,7 +442,7 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.EventStatus}" />
+                            <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.EventStatus}" />
                             <ComboBox
                                 Margin="0,6,0,0"
                                 ItemsSource="{Binding EventStatusOptions}"
@@ -443,7 +451,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2">
-                            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Reminder}" />
+                            <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.Reminder}" />
                             <ComboBox
                                 Margin="0,6,0,0"
                                 ItemsSource="{Binding ReminderOptions}"
@@ -460,7 +468,7 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.StartTime}" />
+                            <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.StartTime}" />
                             <Grid Margin="0,6,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -508,7 +516,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2">
-                            <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.EndTime}" />
+                            <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.EndTime}" />
                             <Grid Margin="0,6,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -557,7 +565,7 @@
                     </Grid>
 
                     <StackPanel Margin="0,12,0,0">
-                        <TextBlock FontSize="12" Foreground="{DynamicResource App.TextMutedBrush}" Text="{markup:Loc Editor.Location}" />
+                        <TextBlock Style="{StaticResource EditorFieldLabelStyle}" Text="{markup:Loc Editor.Location}" />
                         <TextBox
                             Margin="0,6,0,0"
                             Text="{Binding Location, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -591,12 +599,12 @@
                         HorizontalAlignment="Right"
                         Orientation="Horizontal">
                         <Button
-                            Width="120"
+                            Width="126"
                             Style="{StaticResource SecondaryActionButtonStyle}"
                             Command="{Binding CancelCommand}"
                             Content="{markup:Loc Editor.Cancel}" />
                         <Button
-                            Width="120"
+                            Width="126"
                             Margin="12,0,0,0"
                             Style="{StaticResource PrimaryActionButtonStyle}"
                             Command="{Binding SaveCommand}"

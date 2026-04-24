@@ -101,6 +101,43 @@ public sealed class SqliteCalendarRecordRepository : ICalendarRecordRepository
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<CalendarRecord>> GetOlderThanAsync(
+        DateOnly cutoffDateExclusive,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+                           SELECT
+                               id AS Id,
+                               type_id AS TypeId,
+                               record_date AS Date,
+                               title AS Title,
+                               details AS Details,
+                               is_completed AS IsCompleted,
+                               task_reminder_time AS TaskReminderTime,
+                               start_time AS StartTime,
+                               end_time AS EndTime,
+                               location AS Location,
+                               event_status_id AS EventStatusId,
+                               reminder_minutes_before AS ReminderMinutesBefore
+                           FROM calendar_records
+                           WHERE record_date < @CutoffDate
+                           ORDER BY record_date, title;
+                           """;
+
+        await using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var command = new CommandDefinition(
+            sql,
+            new { CutoffDate = cutoffDateExclusive.ToString("yyyy-MM-dd") },
+            cancellationToken: cancellationToken);
+
+        var dataModels = (await connection.QueryAsync<CalendarRecordDataModel>(command)).ToArray();
+        var records = dataModels.Select(MapToDomain).ToArray();
+        var attachmentsByRecordId = await LoadAttachmentsAsync(connection, records.Select(record => record.Id), cancellationToken);
+        AttachAttachments(records, attachmentsByRecordId);
+        return records;
+    }
+
+    /// <inheritdoc />
     public async Task SaveAsync(CalendarRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);

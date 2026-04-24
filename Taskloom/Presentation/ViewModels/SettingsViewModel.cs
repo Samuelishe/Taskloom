@@ -15,6 +15,8 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IAppSettingsService _settingsService;
     private readonly IThemeService _themeService;
     private bool _isInitialized;
+    private IReadOnlyList<ThemeOptionViewModel> _themes = Array.Empty<ThemeOptionViewModel>();
+    private IReadOnlyList<CleanupModeOptionViewModel> _cleanupModes = Array.Empty<CleanupModeOptionViewModel>();
 
     public SettingsViewModel(
         ILocalizationService localizationService,
@@ -24,34 +26,36 @@ public partial class SettingsViewModel : ObservableObject
         _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+        _localizationService.LanguageChanged += OnLanguageChanged;
 
         Languages =
         [
             new LanguageOptionViewModel("ru-RU", "Русский"),
             new LanguageOptionViewModel("en-US", "English")
         ];
-
-        Themes = _themeService.Themes
-            .Select(theme => new ThemeOptionViewModel(_localizationService, theme))
-            .ToArray();
-
-        SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
-        CancelCommand = new RelayCommand(Cancel);
+        RebuildLocalizedOptions();
 
         SelectedLanguage = Languages.First(option =>
             string.Equals(option.CultureName, _localizationService.CurrentCultureName, StringComparison.OrdinalIgnoreCase));
         SelectedTheme = Themes.First(option =>
             string.Equals(option.ThemeId, _themeService.CurrentThemeId, StringComparison.OrdinalIgnoreCase));
-        _isInitialized = true;
+        SelectedCleanupMode = CleanupModes[0];
+        _ = InitializeAsync();
     }
 
     public IReadOnlyList<LanguageOptionViewModel> Languages { get; }
 
-    public IReadOnlyList<ThemeOptionViewModel> Themes { get; }
+    public IReadOnlyList<ThemeOptionViewModel> Themes
+    {
+        get => _themes;
+        private set => SetProperty(ref _themes, value);
+    }
 
-    public IAsyncRelayCommand SaveCommand { get; }
-
-    public IRelayCommand CancelCommand { get; }
+    public IReadOnlyList<CleanupModeOptionViewModel> CleanupModes
+    {
+        get => _cleanupModes;
+        private set => SetProperty(ref _cleanupModes, value);
+    }
 
     public event EventHandler<SettingsCloseRequestedEventArgs>? CloseRequested;
 
@@ -62,7 +66,10 @@ public partial class SettingsViewModel : ObservableObject
     private ThemeOptionViewModel selectedTheme;
 
     [ObservableProperty]
-    private bool isSaving;
+    private CleanupModeOptionViewModel selectedCleanupMode;
+
+    [ObservableProperty]
+    private bool isApplying;
 
     [ObservableProperty]
     private string? statusText;
@@ -73,7 +80,7 @@ public partial class SettingsViewModel : ObservableObject
 
         if (_isInitialized)
         {
-            SaveCommand.NotifyCanExecuteChanged();
+            _ = ApplyLanguageAndThemeAsync();
         }
     }
 
@@ -83,24 +90,62 @@ public partial class SettingsViewModel : ObservableObject
 
         if (_isInitialized)
         {
-            SaveCommand.NotifyCanExecuteChanged();
+            _ = ApplyLanguageAndThemeAsync();
         }
     }
 
-    partial void OnIsSavingChanged(bool value)
+    partial void OnSelectedCleanupModeChanged(CleanupModeOptionViewModel value)
     {
-        SaveCommand.NotifyCanExecuteChanged();
+        StatusText = null;
+
+        if (_isInitialized)
+        {
+            _ = ApplyCleanupModeAsync();
+        }
     }
 
-    private async Task SaveAsync(CancellationToken cancellationToken)
+    public void Close()
     {
-        IsSaving = true;
+        CloseRequested?.Invoke(this, new SettingsCloseRequestedEventArgs(false));
+    }
+
+    public CleanupModeOptionViewModel GetCleanupModeOption(RecordCleanupMode cleanupMode)
+    {
+        return CleanupModes.First(option => option.CleanupMode == cleanupMode);
+    }
+
+    private async Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var settings = await _settingsService.LoadAsync(cancellationToken);
+            SelectedCleanupMode = CleanupModes.First(option => option.CleanupMode == settings.RecordCleanupMode);
+        }
+        catch (Exception exception)
+        {
+            StatusText = _localizationService.Format("Settings.SaveFailed", exception.Message);
+        }
+        finally
+        {
+            _isInitialized = true;
+        }
+    }
+
+    private async Task ApplyLanguageAndThemeAsync(CancellationToken cancellationToken = default)
+    {
+        if (IsApplying)
+        {
+            return;
+        }
+
+        IsApplying = true;
 
         try
         {
             var settings = await _settingsService.LoadAsync(cancellationToken);
             settings.LanguageCultureName = SelectedLanguage.CultureName;
             settings.ThemeId = SelectedTheme.ThemeId;
+            settings.RecordCleanupMode = SelectedCleanupMode.CleanupMode;
 
             await _settingsService.SaveAsync(settings, cancellationToken);
             await _localizationService.SetCultureAsync(SelectedLanguage.CultureName, cancellationToken);
@@ -112,27 +157,53 @@ public partial class SettingsViewModel : ObservableObject
         }
         finally
         {
-            IsSaving = false;
+            IsApplying = false;
         }
     }
 
-    private bool CanSave()
+    private async Task ApplyCleanupModeAsync(CancellationToken cancellationToken = default)
     {
-        return !IsSaving &&
-               (
-                   !string.Equals(
-                       SelectedLanguage.CultureName,
-                       _localizationService.CurrentCultureName,
-                       StringComparison.OrdinalIgnoreCase)
-                   || !string.Equals(
-                       SelectedTheme.ThemeId,
-                       _themeService.CurrentThemeId,
-                       StringComparison.OrdinalIgnoreCase)
-               );
+        if (IsApplying)
+        {
+            return;
+        }
+
+        try
+        {
+            var settings = await _settingsService.LoadAsync(cancellationToken);
+            settings.RecordCleanupMode = SelectedCleanupMode.CleanupMode;
+            await _settingsService.SaveAsync(settings, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            StatusText = _localizationService.Format("Settings.SaveFailed", exception.Message);
+        }
     }
 
-    private void Cancel()
+    private void OnLanguageChanged(object? sender, EventArgs e)
     {
-        CloseRequested?.Invoke(this, new SettingsCloseRequestedEventArgs(false));
+        var selectedThemeId = SelectedTheme.ThemeId;
+        var selectedCleanupModeValue = SelectedCleanupMode.CleanupMode;
+
+        RebuildLocalizedOptions();
+
+        SelectedTheme = Themes.First(option => option.ThemeId == selectedThemeId);
+        SelectedCleanupMode = CleanupModes.First(option => option.CleanupMode == selectedCleanupModeValue);
+    }
+
+    private void RebuildLocalizedOptions()
+    {
+        Themes = _themeService.Themes
+            .Select(theme => new ThemeOptionViewModel(_localizationService, theme))
+            .ToArray();
+
+        CleanupModes =
+        [
+            new CleanupModeOptionViewModel(_localizationService, "Settings.Cleanup.Never", RecordCleanupMode.Never),
+            new CleanupModeOptionViewModel(_localizationService, "Settings.Cleanup.All7Days", RecordCleanupMode.DeleteAllOlderThan7Days),
+            new CleanupModeOptionViewModel(_localizationService, "Settings.Cleanup.All1Month", RecordCleanupMode.DeleteAllOlderThan1Month),
+            new CleanupModeOptionViewModel(_localizationService, "Settings.Cleanup.CompletedAndPast7Days", RecordCleanupMode.DeleteCompletedAndPastOlderThan7Days),
+            new CleanupModeOptionViewModel(_localizationService, "Settings.Cleanup.CompletedAndPast1Month", RecordCleanupMode.DeleteCompletedAndPastOlderThan1Month)
+        ];
     }
 }

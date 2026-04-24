@@ -38,7 +38,7 @@ public sealed class RecordImageStorageService : IRecordImageStorageService
             throw new InvalidOperationException("Поддерживаются только изображения JPEG, PNG, BMP и GIF.");
         }
 
-        var targetDirectory = TaskloomPaths.GetImagesDirectoryPath();
+        var targetDirectory = TaskloomPaths.GetRecordImagesDirectoryPath(recordId);
         Directory.CreateDirectory(targetDirectory);
 
         var storedFileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
@@ -51,7 +51,7 @@ public sealed class RecordImageStorageService : IRecordImageStorageService
         }
 
         var sourceInfo = new FileInfo(sourceFilePath);
-        var relativePath = Path.Combine("Media", "Images", storedFileName);
+        var relativePath = Path.Combine("Records", recordId.ToString("D"), "images", storedFileName);
 
         return new RecordAttachment(
             Guid.NewGuid(),
@@ -86,5 +86,33 @@ public sealed class RecordImageStorageService : IRecordImageStorageService
         }
 
         File.Delete(absolutePath);
+        CleanupEmptyRecordDirectories(absolutePath);
+    }
+
+    private static void CleanupEmptyRecordDirectories(string deletedAbsolutePath)
+    {
+        try
+        {
+            var recordsDirectoryPath = TaskloomPaths.GetRecordsDirectoryPath();
+            var currentDirectoryPath = Path.GetDirectoryName(deletedAbsolutePath);
+
+            while (!string.IsNullOrWhiteSpace(currentDirectoryPath) &&
+                   currentDirectoryPath.StartsWith(recordsDirectoryPath, StringComparison.OrdinalIgnoreCase) &&
+                   !string.Equals(currentDirectoryPath, recordsDirectoryPath, StringComparison.OrdinalIgnoreCase))
+            {
+                if (Directory.EnumerateFileSystemEntries(currentDirectoryPath).Any())
+                {
+                    break;
+                }
+
+                var parentDirectoryPath = Path.GetDirectoryName(currentDirectoryPath);
+                Directory.Delete(currentDirectoryPath, false);
+                currentDirectoryPath = parentDirectoryPath;
+            }
+        }
+        catch
+        {
+            // Ошибки фоновой очистки пустых каталогов не должны ломать удаление файла.
+        }
     }
 }

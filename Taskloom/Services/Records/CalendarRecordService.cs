@@ -1,4 +1,5 @@
 using Taskloom.Domain;
+using Taskloom.Services.Settings;
 
 namespace Taskloom.Services.Records;
 
@@ -10,15 +11,18 @@ public sealed class CalendarRecordService : ICalendarRecordService
     private readonly ICalendarRecordRepository _repository;
     private readonly IRecordImageStorageService _imageStorageService;
     private readonly IRecordAudioStorageService _audioStorageService;
+    private readonly IRecordResourceMetadataService _recordResourceMetadataService;
 
     public CalendarRecordService(
         ICalendarRecordRepository repository,
         IRecordImageStorageService imageStorageService,
-        IRecordAudioStorageService audioStorageService)
+        IRecordAudioStorageService audioStorageService,
+        IRecordResourceMetadataService recordResourceMetadataService)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _imageStorageService = imageStorageService ?? throw new ArgumentNullException(nameof(imageStorageService));
         _audioStorageService = audioStorageService ?? throw new ArgumentNullException(nameof(audioStorageService));
+        _recordResourceMetadataService = recordResourceMetadataService ?? throw new ArgumentNullException(nameof(recordResourceMetadataService));
     }
 
     /// <inheritdoc />
@@ -64,6 +68,7 @@ public sealed class CalendarRecordService : ICalendarRecordService
 
         DeleteRemovedImages(existingRecord?.ImageAttachments ?? [], record.ImageAttachments);
         DeleteRemovedAudios(existingRecord?.AudioAttachments ?? [], record.AudioAttachments);
+        await _recordResourceMetadataService.WriteRecordMetadataAsync(record, cancellationToken);
 
         return record;
     }
@@ -83,6 +88,8 @@ public sealed class CalendarRecordService : ICalendarRecordService
         {
             DeleteAudioAttachmentFiles(attachment);
         }
+
+        _recordResourceMetadataService.DeleteRecordResources(id);
     }
 
     /// <inheritdoc />
@@ -111,6 +118,37 @@ public sealed class CalendarRecordService : ICalendarRecordService
 
         await _repository.SaveAsync(taskRecord, cancellationToken);
         return taskRecord;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CleanupOldRecordsAsync(RecordCleanupMode cleanupMode, CancellationToken cancellationToken = default)
+    {
+        if (cleanupMode == RecordCleanupMode.Never)
+        {
+            return 0;
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var cutoffDate = cleanupMode switch
+        {
+            RecordCleanupMode.DeleteAllOlderThan7Days => today.AddDays(-7),
+            RecordCleanupMode.DeleteCompletedAndPastOlderThan7Days => today.AddDays(-7),
+            RecordCleanupMode.DeleteAllOlderThan1Month => today.AddMonths(-1),
+            RecordCleanupMode.DeleteCompletedAndPastOlderThan1Month => today.AddMonths(-1),
+            _ => today
+        };
+
+        var records = await _repository.GetOlderThanAsync(cutoffDate, cancellationToken);
+        var recordsToDelete = records
+            .Where(record => ShouldDeleteRecord(record, cleanupMode, today))
+            .ToArray();
+
+        foreach (var record in recordsToDelete)
+        {
+            await DeleteAsync(record.Id, cancellationToken);
+        }
+
+        return recordsToDelete.Length;
     }
 
     private async Task<(CalendarRecord Record, List<string> ImportedRelativePaths)> CreateRecordAsync(
@@ -408,6 +446,28 @@ public sealed class CalendarRecordService : ICalendarRecordService
             DisplayTitle = attachment.DisplayTitle,
             DurationSeconds = attachment.DurationSeconds,
             CoverRelativePath = attachment.PreviewRelativePath
+        };
+    }
+
+    private static bool ShouldDeleteRecord(CalendarRecord record, RecordCleanupMode cleanupMode, DateOnly today)
+    {
+        return cleanupMode switch
+        {
+            RecordCleanupMode.DeleteAllOlderThan7Days => true,
+            RecordCleanupMode.DeleteAllOlderThan1Month => true,
+            RecordCleanupMode.DeleteCompletedAndPastOlderThan7Days => record switch
+            {
+                TaskRecord taskRecord => taskRecord.IsCompleted,
+                EventRecord eventRecord => eventRecord.Date < today,
+                _ => false
+            },
+            RecordCleanupMode.DeleteCompletedAndPastOlderThan1Month => record switch
+            {
+                TaskRecord taskRecord => taskRecord.IsCompleted,
+                EventRecord eventRecord => eventRecord.Date < today,
+                _ => false
+            },
+            _ => false
         };
     }
 }

@@ -21,6 +21,13 @@ public interface ICalendarRecordRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Возвращает записи, дата которых раньше заданной границы.
+    /// </summary>
+    Task<IReadOnlyList<CalendarRecord>> GetOlderThanAsync(
+        DateOnly cutoffDateExclusive,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Сохраняет запись.
     /// </summary>
     Task SaveAsync(CalendarRecord record, CancellationToken cancellationToken = default);

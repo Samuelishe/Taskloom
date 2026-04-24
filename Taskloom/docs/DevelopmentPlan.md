@@ -32,10 +32,11 @@
 - [x] Multiple image attachments и grid gallery
 - [x] Кликабельные ссылки в описании записи
 - [x] Audio attachments и playlist в карточке записи
+- [x] Startup cleanup старых записей и per-record resource folders
 
 ## Точка продолжения
 
-Следующий рабочий этап: ручная проверка audio playlist, task reminders, event reminders, multiple image attachments и обновлённого редактора записи, затем отдельный этап `strip mode`.
+Следующий рабочий этап: ручная проверка startup cleanup, instant-apply настроек, audio playlist, task reminders, event reminders, multiple image attachments и обновлённого редактора записи, затем отдельный этап `strip mode`.
 
 Перед продолжением новой сессии нужно прочитать:
 
@@ -214,6 +215,10 @@
 - [x] Добавить несколько audio attachments на запись
 - [x] Показать playlist в карточке записи с play/pause и seek
 - [x] Читать title/duration/cover из метаданных аудио
+- [x] Добавить startup cleanup старых записей по политике из настроек
+- [x] Перевести ресурсы записи на каталоги `%LocalAppData%\\Taskloom\\Records\\<record-id>`
+- [x] Добавить metadata-файл `record.json` для файловой части записи
+- [x] Перевести окно настроек на instant apply без кнопки `Применить`
 - [ ] Добавить `strip mode` с горизонтальным drag-scroll внутри контейнера
 - [x] Добавить режим сворачивания приложения в трей
 - [x] Добавить tray menu: `Открыть`, `Настройки`, `Выход`

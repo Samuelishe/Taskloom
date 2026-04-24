@@ -1,5 +1,55 @@
 # Журнал работ
 
+## 2026-04-24 - Startup cleanup, instant-apply settings и per-record resource folders
+
+### Что сделано
+
+- Добавлен enum `RecordCleanupMode` и новое поле `RecordCleanupMode` в `AppSettings`.
+- Окно настроек переведено на instant apply: язык, тема и политика очистки применяются сразу при выборе; отдельная кнопка `Применить` удалена.
+- Для опасных режимов удаления всех старых записей добавлено подтверждение через `MessageBox` и откат выбора при отказе.
+- Добавлен startup cleanup старых записей через `CalendarRecordService.CleanupOldRecordsAsync`.
+- Введены пять режимов очистки: `Never`, удаление всех записей старше `7 дней` или `1 месяца`, а также два безопасных режима только для завершённых задач и прошедших событий.
+- Файловые ресурсы записи перенесены в отдельные каталоги `%LocalAppData%\Taskloom\Records\<record-id>\images`, `audio`, `audio-covers`.
+- Добавлен `RecordResourceMetadataService`, который поддерживает metadata-файл `%LocalAppData%\Taskloom\Records\<record-id>\record.json`.
+- Удаление записи теперь очищает и SQLite, и файловый каталог записи.
+- Startup cleanup защищён от падения всего приложения: ошибки пишутся в `%LocalAppData%\Taskloom\record-cleanup.log`.
+- Обновлены `README.md` и проектная документация.
+
+### Изменённые и созданные файлы
+
+- `README.md`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Infrastructure/Repositories/SqliteCalendarRecordRepository.cs`
+- `Taskloom/Infrastructure/Storage/RecordAudioStorageService.cs`
+- `Taskloom/Infrastructure/Storage/RecordImageStorageService.cs`
+- `Taskloom/Infrastructure/Storage/RecordResourceMetadataService.cs`
+- `Taskloom/Infrastructure/Storage/TaskloomDiagnosticLog.cs`
+- `Taskloom/Infrastructure/Storage/TaskloomPaths.cs`
+- `Taskloom/Presentation/ViewModels/CleanupModeOptionViewModel.cs`
+- `Taskloom/Presentation/ViewModels/SettingsViewModel.cs`
+- `Taskloom/Presentation/Views/SettingsWindow.xaml`
+- `Taskloom/Presentation/Views/SettingsWindow.xaml.cs`
+- `Taskloom/Services/Records/CalendarRecordService.cs`
+- `Taskloom/Services/Records/ICalendarRecordRepository.cs`
+- `Taskloom/Services/Records/ICalendarRecordService.cs`
+- `Taskloom/Services/Records/IRecordResourceMetadataService.cs`
+- `Taskloom/Services/Settings/AppSettings.cs`
+- `Taskloom/Services/Settings/RecordCleanupMode.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/Decisions.md`
+- `Taskloom/docs/DevelopmentPlan.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Auto-cleanup должен быть частью настроек приложения, а не разовой ручной операцией.
+- Перевод вложений на каталоги конкретной записи упрощает полное удаление ресурсов и готовит почву для будущих export/import сценариев.
+- Instant apply в настройках уменьшает лишние действия пользователя и делает тему/язык/cleanup policy более предсказуемыми.
+
 ## 2026-04-23 - Инициализация структуры проекта
 
 ### Что сделано

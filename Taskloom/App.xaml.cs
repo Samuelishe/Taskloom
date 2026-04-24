@@ -37,6 +37,7 @@ public partial class App : System.Windows.Application
     private bool _windowsAppSdkBootstrapped;
     private readonly string _notificationLogPath = TaskloomPaths.GetNotificationLogPath();
     private readonly string _startupLogPath = TaskloomPaths.GetStartupLogPath();
+    private readonly string _recordCleanupLogPath = TaskloomPaths.GetRecordCleanupLogPath();
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -68,8 +69,10 @@ public partial class App : System.Windows.Application
             var repository = new SqliteCalendarRecordRepository(connectionFactory);
             var imageStorageService = new RecordImageStorageService();
             var audioStorageService = new RecordAudioStorageService();
+            var recordResourceMetadataService = new RecordResourceMetadataService();
             _audioPlaybackService = new AudioPlaybackService();
-            var recordService = new CalendarRecordService(repository, imageStorageService, audioStorageService);
+            var recordService = new CalendarRecordService(repository, imageStorageService, audioStorageService, recordResourceMetadataService);
+            await RunStartupCleanupAsync(recordService, settings.RecordCleanupMode);
             _trayService = new WindowsTrayService(localizationService);
             _notificationService = CreateNotificationService(localizationService, _trayService);
             _eventReminderService = new WindowsBalloonEventReminderService(recordService, localizationService, _notificationService);
@@ -150,6 +153,28 @@ public partial class App : System.Windows.Application
     private void OnNotificationActivated()
     {
         OnTrayOpenRequested(this, EventArgs.Empty);
+    }
+
+    private async Task RunStartupCleanupAsync(ICalendarRecordService recordService, RecordCleanupMode cleanupMode)
+    {
+        try
+        {
+            var deletedRecordsCount = await recordService.CleanupOldRecordsAsync(cleanupMode);
+
+            if (deletedRecordsCount > 0)
+            {
+                TaskloomDiagnosticLog.Append(
+                    _recordCleanupLogPath,
+                    $"Startup cleanup completed. Mode={cleanupMode}. DeletedRecords={deletedRecordsCount}.");
+            }
+        }
+        catch (Exception exception)
+        {
+            TaskloomDiagnosticLog.AppendException(
+                _recordCleanupLogPath,
+                exception,
+                $"Startup cleanup failed. Mode={cleanupMode}");
+        }
     }
 
     private void InitializeWindowsAppSdkBootstrap()

@@ -3,14 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <Style x:Key="SecondaryActionButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="42" />
-            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="18,0" />
             <Setter Property="Background" Value="{DynamicResource App.SurfaceMutedBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -19,10 +22,12 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
                             CornerRadius="12">
                             <ContentPresenter
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center" />
+                                VerticalAlignment="Center"
+                                RecognizesAccessKey="True" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -57,10 +62,24 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="CompactActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryActionButtonStyle}">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="MinWidth" Value="34" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="{DynamicResource App.InputBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
         <Style TargetType="ComboBox">
@@ -68,7 +87,9 @@
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="FontSize" Value="13" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -96,7 +117,7 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <ContentPresenter
-                                                    Margin="10,0,4,0"
+                                                    Margin="12,0,6,0"
                                                     HorizontalAlignment="Left"
                                                     VerticalAlignment="Center"
                                                     Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
@@ -104,6 +125,7 @@
                                                     <ContentPresenter.Resources>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
+                                                            <Setter Property="FontSize" Value="13" />
                                                         </Style>
                                                     </ContentPresenter.Resources>
                                                 </ContentPresenter>
@@ -152,13 +174,14 @@
         </Style>
 
         <Style TargetType="ComboBoxItem">
-            <Setter Property="MinHeight" Value="32" />
-            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="Padding" Value="12,7" />
             <Setter Property="Background" Value="{DynamicResource App.InputBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FontSize" Value="13" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBoxItem">
@@ -396,7 +419,8 @@
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Height" Value="36" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="FontSize" Value="13" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="CalendarStyle" Value="{StaticResource ThemedPopupCalendarStyle}" />
             <Setter Property="Template">
@@ -483,7 +507,8 @@
             <Setter Property="Foreground" Value="{DynamicResource App.TextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="FontSize" Value="13" />
             <Setter Property="SelectionBrush" Value="{DynamicResource App.SurfaceSelectedBrush}" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
