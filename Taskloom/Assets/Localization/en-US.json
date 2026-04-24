@@ -2,6 +2,8 @@
   "App.Title": "Taskloom",
   "Startup.ErrorTitle": "Taskloom",
   "Startup.ErrorMessage": "Failed to start the application.\n\n{0}",
+  "Dialog.Yes": "Yes",
+  "Dialog.No": "No",
   "MainWindow.Tagline": "Personal organizer built around the calendar.",
   "MainWindow.SelectedDate": "Selected date",
   "MainWindow.PreviousDay": "Previous day",

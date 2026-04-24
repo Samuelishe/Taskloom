@@ -14,7 +14,10 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ILocalizationService _localizationService;
     private readonly IAppSettingsService _settingsService;
     private readonly IThemeService _themeService;
+    private bool _isApplyingSettings;
     private bool _isInitialized;
+    private bool _isRefreshingSelections;
+    private bool _hasPendingSettingsApply;
     private IReadOnlyList<ThemeOptionViewModel> _themes = Array.Empty<ThemeOptionViewModel>();
     private IReadOnlyList<CleanupModeOptionViewModel> _cleanupModes = Array.Empty<CleanupModeOptionViewModel>();
 
@@ -78,9 +81,9 @@ public partial class SettingsViewModel : ObservableObject
     {
         StatusText = null;
 
-        if (_isInitialized)
+        if (_isInitialized && !_isRefreshingSelections)
         {
-            _ = ApplyLanguageAndThemeAsync();
+            QueueSettingsApply();
         }
     }
 
@@ -88,9 +91,9 @@ public partial class SettingsViewModel : ObservableObject
     {
         StatusText = null;
 
-        if (_isInitialized)
+        if (_isInitialized && !_isRefreshingSelections)
         {
-            _ = ApplyLanguageAndThemeAsync();
+            QueueSettingsApply();
         }
     }
 
@@ -98,9 +101,9 @@ public partial class SettingsViewModel : ObservableObject
     {
         StatusText = null;
 
-        if (_isInitialized)
+        if (_isInitialized && !_isRefreshingSelections)
         {
-            _ = ApplyCleanupModeAsync();
+            QueueSettingsApply();
         }
     }
 
@@ -131,25 +134,35 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    private async Task ApplyLanguageAndThemeAsync(CancellationToken cancellationToken = default)
+    private void QueueSettingsApply()
     {
-        if (IsApplying)
+        _hasPendingSettingsApply = true;
+
+        if (_isApplyingSettings)
         {
             return;
         }
 
+        _ = ApplyPendingSettingsAsync();
+    }
+
+    private async Task ApplyPendingSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        if (_isApplyingSettings)
+        {
+            return;
+        }
+
+        _isApplyingSettings = true;
         IsApplying = true;
 
         try
         {
-            var settings = await _settingsService.LoadAsync(cancellationToken);
-            settings.LanguageCultureName = SelectedLanguage.CultureName;
-            settings.ThemeId = SelectedTheme.ThemeId;
-            settings.RecordCleanupMode = SelectedCleanupMode.CleanupMode;
-
-            await _settingsService.SaveAsync(settings, cancellationToken);
-            await _localizationService.SetCultureAsync(SelectedLanguage.CultureName, cancellationToken);
-            _themeService.ApplyTheme(SelectedTheme.ThemeId);
+            while (_hasPendingSettingsApply)
+            {
+                _hasPendingSettingsApply = false;
+                await ApplyCurrentSelectionsAsync(cancellationToken);
+            }
         }
         catch (Exception exception)
         {
@@ -158,37 +171,59 @@ public partial class SettingsViewModel : ObservableObject
         finally
         {
             IsApplying = false;
+            _isApplyingSettings = false;
         }
     }
 
-    private async Task ApplyCleanupModeAsync(CancellationToken cancellationToken = default)
+    private async Task ApplyCurrentSelectionsAsync(CancellationToken cancellationToken)
     {
-        if (IsApplying)
+        if (SelectedLanguage is null || SelectedTheme is null || SelectedCleanupMode is null)
         {
             return;
         }
 
-        try
+        var selectedLanguageCultureName = SelectedLanguage.CultureName;
+        var selectedThemeId = SelectedTheme.ThemeId;
+        var selectedCleanupMode = SelectedCleanupMode.CleanupMode;
+
+        var settings = await _settingsService.LoadAsync(cancellationToken);
+        settings.LanguageCultureName = selectedLanguageCultureName;
+        settings.ThemeId = selectedThemeId;
+        settings.RecordCleanupMode = selectedCleanupMode;
+
+        await _settingsService.SaveAsync(settings, cancellationToken);
+
+        if (!string.Equals(_localizationService.CurrentCultureName, selectedLanguageCultureName, StringComparison.OrdinalIgnoreCase))
         {
-            var settings = await _settingsService.LoadAsync(cancellationToken);
-            settings.RecordCleanupMode = SelectedCleanupMode.CleanupMode;
-            await _settingsService.SaveAsync(settings, cancellationToken);
+            await _localizationService.SetCultureAsync(selectedLanguageCultureName, cancellationToken);
         }
-        catch (Exception exception)
+
+        if (!string.Equals(_themeService.CurrentThemeId, selectedThemeId, StringComparison.OrdinalIgnoreCase))
         {
-            StatusText = _localizationService.Format("Settings.SaveFailed", exception.Message);
+            _themeService.ApplyTheme(selectedThemeId);
         }
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
-        var selectedThemeId = SelectedTheme.ThemeId;
-        var selectedCleanupModeValue = SelectedCleanupMode.CleanupMode;
+        var selectedCleanupModeValue = SelectedCleanupMode?.CleanupMode ?? RecordCleanupMode.Never;
+        var selectedThemeId = SelectedTheme?.ThemeId ?? _themeService.CurrentThemeId;
 
-        RebuildLocalizedOptions();
+        _isRefreshingSelections = true;
 
-        SelectedTheme = Themes.First(option => option.ThemeId == selectedThemeId);
-        SelectedCleanupMode = CleanupModes.First(option => option.CleanupMode == selectedCleanupModeValue);
+        try
+        {
+            RebuildLocalizedOptions();
+
+            SelectedLanguage = Languages.First(option =>
+                string.Equals(option.CultureName, _localizationService.CurrentCultureName, StringComparison.OrdinalIgnoreCase));
+            SelectedTheme = Themes.First(option => option.ThemeId == selectedThemeId);
+            SelectedCleanupMode = CleanupModes.First(option => option.CleanupMode == selectedCleanupModeValue);
+        }
+        finally
+        {
+            _isRefreshingSelections = false;
+        }
     }
 
     private void RebuildLocalizedOptions()

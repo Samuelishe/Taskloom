@@ -574,6 +574,8 @@
                                         <Setter Property="BorderThickness" Value="0" />
                                         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="VerticalContentAlignment" Value="Top" />
+                                        <Setter Property="VerticalAlignment" Value="Top" />
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ListBoxItem">
@@ -606,6 +608,7 @@
                                         <Border
                                             x:Name="CardRoot"
                                             MinHeight="220"
+                                            VerticalAlignment="Top"
                                             Background="{DynamicResource App.SurfacePrimaryBrush}"
                                             BorderBrush="{DynamicResource App.BorderBrush}"
                                             BorderThickness="1"
@@ -631,7 +634,7 @@
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="*" />
+                                                        <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>

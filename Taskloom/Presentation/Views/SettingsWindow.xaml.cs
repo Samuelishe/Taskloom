@@ -55,14 +55,15 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        var result = System.Windows.MessageBox.Show(
+        var localizationService = App.CurrentApp.LocalizationService;
+        var isConfirmed = ConfirmationDialogWindow.ShowYesNo(
             this,
-            App.CurrentApp.LocalizationService.GetString("Settings.CleanupDangerousConfirmationMessage"),
-            App.CurrentApp.LocalizationService.GetString("Settings.CleanupDangerousConfirmationTitle"),
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            localizationService.GetString("Settings.CleanupDangerousConfirmationTitle"),
+            localizationService.GetString("Settings.CleanupDangerousConfirmationMessage"),
+            localizationService.GetString("Dialog.Yes"),
+            localizationService.GetString("Dialog.No"));
 
-        if (result == MessageBoxResult.Yes)
+        if (isConfirmed)
         {
             _lastConfirmedCleanupMode = selectedOption.CleanupMode;
             return;

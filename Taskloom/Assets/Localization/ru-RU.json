@@ -2,6 +2,8 @@
   "App.Title": "Taskloom",
   "Startup.ErrorTitle": "Taskloom",
   "Startup.ErrorMessage": "Не удалось запустить приложение.\n\n{0}",
+  "Dialog.Yes": "Да",
+  "Dialog.No": "Нет",
   "MainWindow.Tagline": "Персональный органайзер, построенный вокруг календаря.",
   "MainWindow.SelectedDate": "Выбранная дата",
   "MainWindow.PreviousDay": "Предыдущий день",

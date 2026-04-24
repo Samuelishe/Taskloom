@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IAudioPlaybackService _audioPlaybackService;
     private readonly string _recordLoadLogPath = TaskloomPaths.GetRecordLoadLogPath();
     private bool _isInitialized;
+    private bool _isUpdatingFilterOptions;
 
     public MainWindowViewModel(
         ICalendarRecordService recordService,
@@ -169,7 +170,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnSelectedFilterChanged(RecordTypeFilterOptionViewModel value)
     {
-        if (_isInitialized)
+        if (_isInitialized && !_isUpdatingFilterOptions)
         {
             _ = LoadRecordsCommand.ExecuteAsync(null);
         }
@@ -200,9 +201,11 @@ public partial class MainWindowViewModel : ObservableObject
 
         try
         {
+            var selectedFilterType = SelectedFilter?.RecordType;
+
             var records = await _recordService.GetRecordsByDateAsync(
                 SelectedDate,
-                SelectedFilter.RecordType,
+                selectedFilterType,
                 cancellationToken);
 
             ClearRecords();
@@ -417,14 +420,23 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var currentType = SelectedFilter?.RecordType;
 
-        FilterOptions.Clear();
-        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "Filter.All", null));
-        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Task", RecordType.Task));
-        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Note", RecordType.Note));
-        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Event", RecordType.Event));
-        FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.DaySummary", RecordType.DaySummary));
+        _isUpdatingFilterOptions = true;
 
-        SelectedFilter = FilterOptions.FirstOrDefault(option => option.RecordType == currentType) ?? FilterOptions[0];
+        try
+        {
+            FilterOptions.Clear();
+            FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "Filter.All", null));
+            FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Task", RecordType.Task));
+            FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Note", RecordType.Note));
+            FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.Event", RecordType.Event));
+            FilterOptions.Add(new RecordTypeFilterOptionViewModel(_localizationService, "RecordType.DaySummary", RecordType.DaySummary));
+
+            SelectedFilter = FilterOptions.FirstOrDefault(option => option.RecordType == currentType) ?? FilterOptions[0];
+        }
+        finally
+        {
+            _isUpdatingFilterOptions = false;
+        }
     }
 
     private async Task SaveEditorAsync(RecordEditorViewModel editor, CancellationToken cancellationToken)

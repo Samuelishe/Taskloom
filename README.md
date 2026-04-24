@@ -97,6 +97,7 @@ Links are opened through the system handler.
 - Custom title bars styled to match the app
 - Theme-aware controls
 - Instant-apply settings for theme, language, and cleanup policy
+- Themed in-app confirmation dialogs instead of default system message boxes
 - Adaptive record card layout
 - Tray mode for background operation
 

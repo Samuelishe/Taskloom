@@ -15,6 +15,7 @@ public sealed class AppSettingsService : IAppSettingsService
     };
 
     private readonly string _settingsPath;
+    private readonly SemaphoreSlim _settingsLock = new(1, 1);
 
     public AppSettingsService(string settingsPath)
     {
@@ -24,28 +25,46 @@ public sealed class AppSettingsService : IAppSettingsService
 
     public async Task<AppSettings> LoadAsync(CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(_settingsPath))
-        {
-            return new AppSettings();
-        }
+        await _settingsLock.WaitAsync(cancellationToken);
 
-        await using var stream = File.OpenRead(_settingsPath);
-        var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, SerializerOptions, cancellationToken);
-        return settings ?? new AppSettings();
+        try
+        {
+            if (!File.Exists(_settingsPath))
+            {
+                return new AppSettings();
+            }
+
+            await using var stream = File.OpenRead(_settingsPath);
+            var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, SerializerOptions, cancellationToken);
+            return settings ?? new AppSettings();
+        }
+        finally
+        {
+            _settingsLock.Release();
+        }
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        var directoryPath = Path.GetDirectoryName(_settingsPath);
+        await _settingsLock.WaitAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(directoryPath))
+        try
         {
-            Directory.CreateDirectory(directoryPath);
-        }
+            var directoryPath = Path.GetDirectoryName(_settingsPath);
 
-        await using var stream = File.Create(_settingsPath);
-        await JsonSerializer.SerializeAsync(stream, settings, SerializerOptions, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            await using var stream = File.Create(_settingsPath);
+            await JsonSerializer.SerializeAsync(stream, settings, SerializerOptions, cancellationToken);
+        }
+        finally
+        {
+            _settingsLock.Release();
+        }
     }
 }

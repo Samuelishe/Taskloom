@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using Taskloom.Common.Windowing;
+using Taskloom.Infrastructure.Storage;
 using Taskloom.Presentation.ViewModels;
 
 namespace Taskloom.Presentation.Views;
@@ -123,13 +124,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        var result = System.Windows.MessageBox.Show(
-            App.CurrentApp.LocalizationService.Format("MainWindow.DeleteConfirmationMessage", viewModel.SelectedRecord.Title),
-            App.CurrentApp.LocalizationService.GetString("MainWindow.DeleteConfirmationTitle"),
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+        var localizationService = App.CurrentApp.LocalizationService;
+        var isConfirmed = ConfirmationDialogWindow.ShowYesNo(
+            this,
+            localizationService.GetString("MainWindow.DeleteConfirmationTitle"),
+            localizationService.Format("MainWindow.DeleteConfirmationMessage", viewModel.SelectedRecord.Title),
+            localizationService.GetString("Dialog.Yes"),
+            localizationService.GetString("Dialog.No"));
 
-        if (result != MessageBoxResult.Yes)
+        if (!isConfirmed)
         {
             return;
         }
@@ -412,17 +415,27 @@ public partial class MainWindow : Window
 
     private async Task SaveWindowPlacementAsync()
     {
-        var settings = await App.CurrentApp.SettingsService.LoadAsync();
-        var bounds = RestoreBounds;
+        try
+        {
+            var settings = await App.CurrentApp.SettingsService.LoadAsync();
+            var bounds = RestoreBounds;
 
-        settings.HasMainWindowPlacement = true;
-        settings.MainWindowWidth = Math.Max(MinWidth, bounds.Width);
-        settings.MainWindowHeight = Math.Max(MinHeight, bounds.Height);
-        settings.MainWindowState = WindowState == WindowState.Maximized
-            ? nameof(System.Windows.WindowState.Maximized)
-            : nameof(System.Windows.WindowState.Normal);
+            settings.HasMainWindowPlacement = true;
+            settings.MainWindowWidth = Math.Max(MinWidth, bounds.Width);
+            settings.MainWindowHeight = Math.Max(MinHeight, bounds.Height);
+            settings.MainWindowState = WindowState == WindowState.Maximized
+                ? nameof(System.Windows.WindowState.Maximized)
+                : nameof(System.Windows.WindowState.Normal);
 
-        await App.CurrentApp.SettingsService.SaveAsync(settings);
+            await App.CurrentApp.SettingsService.SaveAsync(settings);
+        }
+        catch (Exception exception)
+        {
+            TaskloomDiagnosticLog.AppendException(
+                TaskloomPaths.GetStartupLogPath(),
+                exception,
+                "Failed to save main window placement");
+        }
     }
 
     private static DependencyObject? FindInteractiveAudioElement(DependencyObject? source)

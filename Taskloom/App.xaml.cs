@@ -96,6 +96,7 @@ public partial class App : System.Windows.Application
             _trayService.SettingsRequested += OnTraySettingsRequested;
             _trayService.ExitRequested += OnTrayExitRequested;
             mainWindow.Show();
+            mainWindow.Activate();
             _eventReminderService.Start();
         }
         catch (Exception exception)

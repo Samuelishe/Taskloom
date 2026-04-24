@@ -1,5 +1,45 @@
 # Журнал работ
 
+## 2026-04-24 - Стабилизация настроек, карточек и подтверждающих окон
+
+### Что сделано
+
+- Исправлено выравнивание контента в карточках записей: короткий текст больше не центрируется по высоте рядом с более высокими карточками.
+- Порядок блоков карточки закреплён как `заголовок -> текстовые блоки -> аудио -> изображения`.
+- Исправлены гонки instant-apply в окне настроек: быстрые переключения темы и языка больше не должны запускать конфликтующие параллельные операции.
+- `AppSettingsService` сериализует доступ к `settings.json`, поэтому сохранение настроек и placement главного окна больше не конфликтуют между собой.
+- В `MainWindowViewModel` добавлена защита от временного `null` у фильтра при локализационной перестройке option-списков.
+- После `Show()` главное окно теперь явно активируется, чтобы уменьшить риск сценария, где первый клик по `Новая запись` только активирует окно.
+- Для подтверждений удаления записи и dangerous cleanup mode добавлено собственное themed-окно `ConfirmationDialogWindow` вместо системного `MessageBox`.
+- Добавлены локализованные подписи `Да/Нет` и `Yes/No` для нового диалога.
+- Сборка `dotnet build .\Taskloom.sln --no-restore` выполнена успешно без предупреждений и ошибок.
+
+### Изменённые и созданные файлы
+
+- `README.md`
+- `Taskloom/App.xaml.cs`
+- `Taskloom/Assets/Localization/ru-RU.json`
+- `Taskloom/Assets/Localization/en-US.json`
+- `Taskloom/Infrastructure/Settings/AppSettingsService.cs`
+- `Taskloom/Presentation/ViewModels/MainWindowViewModel.cs`
+- `Taskloom/Presentation/ViewModels/SettingsViewModel.cs`
+- `Taskloom/Presentation/Views/ConfirmationDialogWindow.xaml`
+- `Taskloom/Presentation/Views/ConfirmationDialogWindow.xaml.cs`
+- `Taskloom/Presentation/Views/MainWindow.xaml`
+- `Taskloom/Presentation/Views/MainWindow.xaml.cs`
+- `Taskloom/Presentation/Views/SettingsWindow.xaml.cs`
+- `Taskloom/docs/Architecture.md`
+- `Taskloom/docs/ContinuationGuide.md`
+- `Taskloom/docs/GitWorkflow.md`
+- `Taskloom/docs/ProjectOverview.md`
+- `Taskloom/docs/WorkLog.md`
+
+### Обоснование
+
+- Системный `MessageBox` визуально конфликтовал с theme-aware интерфейсом и не наследовал активную тему приложения.
+- Параллельные сохранения `settings.json` уже приводили к падению приложения при закрытии окна после быстрых переключений настроек.
+- Карточки записей должны сохранять естественный reading order сверху вниз, даже если соседние карточки в ряду выше.
+
 ## 2026-04-24 - Startup cleanup, instant-apply settings и per-record resource folders
 
 ### Что сделано

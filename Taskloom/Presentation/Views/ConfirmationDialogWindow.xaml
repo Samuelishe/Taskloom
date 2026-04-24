@@ -1,0 +1,119 @@
+<Window x:Class="Taskloom.Presentation.Views.ConfirmationDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Width="460"
+        Height="248"
+        MinWidth="420"
+        MinHeight="220"
+        Background="{DynamicResource App.BorderStrongBrush}"
+        Icon="/Assets/Icons/Taskloom.ico"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None">
+    <WindowChrome.WindowChrome>
+        <WindowChrome
+            CaptionHeight="48"
+            CornerRadius="0"
+            GlassFrameThickness="0"
+            NonClientFrameEdges="None"
+            ResizeBorderThickness="0"
+            UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Border
+        Padding="1"
+        Background="{DynamicResource App.BorderStrongBrush}">
+        <Grid Background="{DynamicResource App.SurfacePrimaryBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid
+                Background="{DynamicResource App.SurfaceSecondaryBrush}"
+                MouseLeftButtonDown="CustomTitleBar_OnMouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock
+                    x:Name="TitleTextBlock"
+                    Margin="24,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource App.TextPrimaryBrush}" />
+
+                <Button
+                    Grid.Column="1"
+                    Margin="0,7,12,0"
+                    Style="{StaticResource WindowCloseCaptionButtonStyle}"
+                    Click="CloseButton_OnClick"
+                    Content="&#xE8BB;"
+                    WindowChrome.IsHitTestVisibleInChrome="True" />
+            </Grid>
+
+            <Grid Grid.Row="1" Margin="24,22,24,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border
+                    Width="52"
+                    Height="52"
+                    VerticalAlignment="Top"
+                    Background="{DynamicResource App.StatusWarningBackgroundBrush}"
+                    BorderBrush="{DynamicResource App.StatusWarningBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="26">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="26"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource App.StatusWarningForegroundBrush}"
+                        Text="!" />
+                </Border>
+
+                <TextBlock
+                    x:Name="MessageTextBlock"
+                    Grid.Column="2"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="{DynamicResource App.TextPrimaryBrush}"
+                    TextWrapping="Wrap" />
+            </Grid>
+
+            <Border
+                Grid.Row="2"
+                Padding="24,0,24,24"
+                Background="{DynamicResource App.SurfacePrimaryBrush}">
+                <StackPanel
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+                    <Button
+                        x:Name="CancelButton"
+                        MinWidth="112"
+                        Click="CancelButton_OnClick"
+                        IsCancel="True"
+                        Style="{StaticResource SecondaryActionButtonStyle}" />
+                    <Button
+                        x:Name="ConfirmButton"
+                        MinWidth="112"
+                        Margin="12,0,0,0"
+                        Click="ConfirmButton_OnClick"
+                        IsDefault="True"
+                        Style="{StaticResource PrimaryActionButtonStyle}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
